@@ -18,17 +18,13 @@ import { ChessTimer } from '@/features/chess/chess-timer'
 import { useChessGame } from '@/features/chess/use-chess-game'
 import type { Square } from 'chess.js'
 
-const { width: SW, height: SH } = Dimensions.get('window')
+const { width: SW } = Dimensions.get('window')
 const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
-
-const CELL    = Math.round(SW / 8)
-const H_TOPS  = Array.from({ length: Math.ceil(SH / CELL) + 3 }, (_, i) => (i - 1) * CELL)
-const V_LEFTS = Array.from({ length: Math.ceil(SW / CELL) + 3 }, (_, i) => (i - 1) * CELL)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function shortAddr(addr: string) {
-  return `${addr.slice(0, 4)}…${addr.slice(-4)}`
+  return `${addr.slice(0, 4)}···${addr.slice(-4)}`
 }
 
 function getCaptured(fen: string): { byWhite: string[]; byBlack: string[] } {
@@ -78,14 +74,13 @@ export default function GameScreen() {
     handleSquarePress, handleResign,
   } = useChessGame(id ?? '', account?.address ?? '')
 
-  // Spinning indicator for loading
-  const spin = useRef(new Animated.Value(0)).current
+  const spinVal = useRef(new Animated.Value(0)).current
   useEffect(() => {
     Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 1000, useNativeDriver: true })
+      Animated.timing(spinVal, { toValue: 1, duration: 1100, useNativeDriver: true })
     ).start()
-  }, [spin])
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+  }, [spinVal])
+  const spinDeg = spinVal.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
 
   useEffect(() => {
     if (match?.status === 'completed') router.replace(`/result/${id}`)
@@ -98,26 +93,11 @@ export default function GameScreen() {
     ])
   }
 
-  const Grid = (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View style={styles.gridWrap}>
-        {H_TOPS.map((top) => (
-          <View key={`h${top}`} style={[styles.gridLine, styles.hLine, { top }]} />
-        ))}
-        {V_LEFTS.map((left) => (
-          <View key={`v${left}`} style={[styles.gridLine, styles.vLine, { left }]} />
-        ))}
-      </View>
-    </View>
-  )
-
   if (isLoading || !match || !playerColor) {
-    const label = !match ? 'LOADING GAME' : 'CONNECTING'
     return (
       <View style={[styles.root, styles.center]}>
-        {Grid}
-        <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
-        <Text style={styles.loadLabel}>{label}</Text>
+        <Animated.View style={[styles.spinner, { transform: [{ rotate: spinDeg }] }]} />
+        <Text style={styles.loadLabel}>{!match ? 'LOADING GAME' : 'CONNECTING'}</Text>
       </View>
     )
   }
@@ -133,7 +113,8 @@ export default function GameScreen() {
   const lastMove      = match.last_move_from && match.last_move_to
     ? { from: match.last_move_from, to: match.last_move_to }
     : null
-  const stakeSOL      = (match.stake_amount / 1e9).toFixed(2)
+  const stakeSOL   = (match.stake_amount / 1e9).toFixed(2)
+  const totalMs    = match.time_control * 1000
 
   const { byWhite, byBlack } = getCaptured(match.fen)
   const myCaptured   = isWhite ? byWhite : byBlack
@@ -142,113 +123,119 @@ export default function GameScreen() {
 
   return (
     <View style={styles.root}>
-      {Grid}
       <SafeAreaView style={styles.safe}>
 
-        <View style={styles.layout}>
+        {/* ─────────────────────────────────────────────────────────────────
+            OPPONENT TIMER — split-zone HUD panel (clock zone on right)
+        ──────────────────────────────────────────────────────────────── */}
+        <ChessTimer
+          milliseconds={opponentMs}
+          isActive={opponentTurn}
+          label={opponentColor === 'white' ? 'White' : 'Black'}
+          shortAddress={opponentKey ? shortAddr(opponentKey) : '···'}
+          totalMs={totalMs}
+        />
 
-          {/* ── Opponent timer ── */}
-          <ChessTimer
-            milliseconds={opponentMs}
-            isActive={opponentTurn}
-            label={opponentColor === 'white' ? 'White' : 'Black'}
-            shortAddress={opponentKey ? shortAddr(opponentKey) : 'Opponent'}
+        {/* ─────────────────────────────────────────────────────────────────
+            BOARD AREA — board centered in available space
+        ──────────────────────────────────────────────────────────────── */}
+        <View style={styles.boardArea}>
+          <ChessBoard
+            fen={match.fen}
+            playerColor={chessColor}
+            selectedSquare={selectedSquare}
+            validTargets={validTargets}
+            lastMove={lastMove}
+            onSquarePress={(sq: Square) => handleSquarePress(sq)}
+            disabled={!isMyTurn}
           />
+        </View>
 
-          {/* ── Turn + stake row ── */}
-          <View style={styles.infoRow}>
-            <View style={styles.turnRow}>
-              <View style={[styles.turnDot, isMyTurn && styles.turnDotActive]} />
-              <Text style={[styles.turnText, isMyTurn && styles.turnTextActive]}>
-                {isMyTurn ? 'YOUR MOVE' : 'WAITING'}
-              </Text>
-            </View>
-            <Text style={styles.stakeText}>{stakeSOL} SOL</Text>
+        {/* ─────────────────────────────────────────────────────────────────
+            STATUS STRIP — turn indicator + stake + captured pieces
+        ──────────────────────────────────────────────────────────────── */}
+        <View style={styles.statusStrip}>
+          {/* Turn indicator */}
+          <View style={styles.turnSection}>
+            <View style={[styles.turnDot, isMyTurn && styles.turnDotActive]} />
+            <Text style={[styles.turnText, isMyTurn && styles.turnTextActive]}>
+              {isMyTurn ? 'YOUR MOVE' : 'OPPONENT'}
+            </Text>
           </View>
 
-          {/* ── Chess board ── */}
-          <View style={styles.boardWrap}>
-            <ChessBoard
-              fen={match.fen}
-              playerColor={chessColor}
-              selectedSquare={selectedSquare}
-              validTargets={validTargets}
-              lastMove={lastMove}
-              onSquarePress={(sq: Square) => handleSquarePress(sq)}
-              disabled={!isMyTurn}
-            />
+          {/* Stake badge — always center */}
+          <View style={styles.stakeBadge}>
+            <Text style={styles.stakeVal}>{stakeSOL}</Text>
+            <Text style={styles.stakeUnit}> SOL</Text>
           </View>
 
-          {/* ── Captured pieces ── */}
-          {myCaptured.length > 0 && (
-            <View style={styles.capturedRow}>
-              <Text style={styles.capturedLabel}>CAPTURED</Text>
-              <View style={styles.capturedPieces}>
-                {myCaptured.map((type, i) => (
-                  <Text key={i} style={styles.capturedPiece}>
-                    {PIECE_SYM[type] ?? ''}
-                  </Text>
-                ))}
-              </View>
+          {/* Captured pieces */}
+          {myCaptured.length > 0 ? (
+            <View style={styles.capturedSection}>
+              {myCaptured.slice(0, 6).map((type, i) => (
+                <Text key={i} style={styles.capturedPiece}>{PIECE_SYM[type] ?? ''}</Text>
+              ))}
             </View>
+          ) : (
+            <View style={styles.capturedSection} />
           )}
+        </View>
 
-          {/* ── Move history ── */}
-          {moveHistory.length > 0 && (
+        {/* ─────────────────────────────────────────────────────────────────
+            MY TIMER — mirror of opponent HUD
+        ──────────────────────────────────────────────────────────────── */}
+        <ChessTimer
+          milliseconds={myMs}
+          isActive={isMyTurn}
+          label={playerColor === 'white' ? 'White' : 'Black'}
+          shortAddress={shortAddr(myKey)}
+          totalMs={totalMs}
+        />
+
+        {/* ─────────────────────────────────────────────────────────────────
+            CONTROLS — resign button + move history scroll
+        ──────────────────────────────────────────────────────────────── */}
+        <View style={styles.controls}>
+          <TouchableOpacity
+            style={styles.resignBtn}
+            onPress={confirmResign}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.resignLabel}>RESIGN</Text>
+          </TouchableOpacity>
+
+          <View style={styles.controlsDivider} />
+
+          {moveHistory.length > 0 ? (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.moveHistoryContent}
-              style={styles.moveHistory}
+              contentContainerStyle={styles.historyList}
+              style={styles.historyScroll}
             >
-              {moveHistory.map((pair, i) => (
-                <View key={i} style={styles.movePair}>
+              {moveHistory.map((pair, idx) => (
+                <View key={idx} style={styles.movePair}>
                   <Text style={styles.moveNum}>{pair.n}.</Text>
-                  <View style={[styles.moveChip, i === lastPairIdx && !pair.b && styles.moveChipActive]}>
-                    <Text style={[styles.moveChipText, i === lastPairIdx && !pair.b && styles.moveChipTextActive]}>
+                  <View style={[styles.moveChip, idx === lastPairIdx && !pair.b && styles.moveChipLast]}>
+                    <Text style={[styles.moveText, idx === lastPairIdx && !pair.b && styles.moveTextLast]}>
                       {pair.w}
                     </Text>
                   </View>
-                  {pair.b ? (
-                    <View style={[styles.moveChip, i === lastPairIdx && styles.moveChipActive]}>
-                      <Text style={[styles.moveChipText, i === lastPairIdx && styles.moveChipTextActive]}>
+                  {pair.b && (
+                    <View style={[styles.moveChip, idx === lastPairIdx && styles.moveChipLast]}>
+                      <Text style={[styles.moveText, idx === lastPairIdx && styles.moveTextLast]}>
                         {pair.b}
                       </Text>
                     </View>
-                  ) : null}
+                  )}
                 </View>
               ))}
             </ScrollView>
+          ) : (
+            <View style={styles.historyEmpty}>
+              <Text style={styles.historyEmptyText}>No moves yet</Text>
+            </View>
           )}
-
-          {/* ── My timer ── */}
-          <ChessTimer
-            milliseconds={myMs}
-            isActive={isMyTurn}
-            label={playerColor === 'white' ? 'White' : 'Black'}
-            shortAddress={shortAddr(myKey)}
-          />
-
-        </View>
-
-        {/* ── Bottom nav ── */}
-        <View style={styles.rule} />
-        <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navBtn} onPress={confirmResign} activeOpacity={0.7}>
-            <Text style={styles.navBtnDanger}>⚑</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} activeOpacity={0.7}>
-            <Text style={styles.navBtnIcon}>↺</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.navBtn, styles.navBtnActive]} activeOpacity={0.7}>
-            <Text style={styles.navBtnIconActive}>⊞</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} activeOpacity={0.7}>
-            <Text style={styles.navBtnIcon}>⌛</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navBtn} activeOpacity={0.7}>
-            <Text style={styles.navBtnIcon}>···</Text>
-          </TouchableOpacity>
         </View>
 
       </SafeAreaView>
@@ -257,102 +244,139 @@ export default function GameScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0B0B0B' },
+  root:   { flex: 1, backgroundColor: '#0B0B0F' },
   safe:   { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center', gap: 14 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
 
-  // ── Grid ────────────────────────────────────────────────────────────────────
-  gridWrap: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-  gridLine: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.06)' },
-  hLine:    { left: -CELL, right: -CELL, height: StyleSheet.hairlineWidth },
-  vLine:    { top: -CELL, bottom: -CELL, width: StyleSheet.hairlineWidth },
-
-  // ── Layout ──────────────────────────────────────────────────────────────────
-  layout: {
+  // ── Board ────────────────────────────────────────────────────────────────
+  boardArea: {
     flex: 1,
-    paddingHorizontal: 22,
-    paddingTop: 6,
-    paddingBottom: 6,
-    gap: 8,
-    justifyContent: 'center',
-  },
-
-  // ── Board ───────────────────────────────────────────────────────────────────
-  boardWrap: {
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0B0B0F',
   },
 
-  // ── Info row ────────────────────────────────────────────────────────────────
-  infoRow: {
+  // ── Status strip ─────────────────────────────────────────────────────────
+  statusStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    height: 38,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#1A1A22',
+    paddingHorizontal: 14,
+    backgroundColor: '#0E0E14',
   },
-  turnRow: {
+  turnSection: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
   },
   turnDot: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.20)',
+    backgroundColor: '#1A1A22',
   },
   turnDotActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E8B84B',
   },
   turnText: {
-    fontSize: 9,
-    fontFamily: mono,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.28)',
-    letterSpacing: 2,
-  },
-  turnTextActive: {
-    color: 'rgba(255,255,255,0.70)',
-  },
-  stakeText: {
-    fontSize: 9,
-    fontFamily: mono,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.30)',
-    letterSpacing: 1.5,
-  },
-
-  // ── Captured pieces ──────────────────────────────────────────────────────────
-  capturedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  capturedLabel: {
     fontSize: 8,
     fontFamily: mono,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.25)',
-    letterSpacing: 2,
-    minWidth: 58,
+    color: 'rgba(240,237,232,0.20)',
+    letterSpacing: 2.2,
   },
-  capturedPieces: {
+  turnTextActive: {
+    color: 'rgba(240,237,232,0.65)',
+  },
+
+  stakeBadge: {
     flexDirection: 'row',
+    alignItems: 'baseline',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,75,0.30)',
+    borderRadius: 2,
+    backgroundColor: 'rgba(232,184,75,0.05)',
+  },
+  stakeVal: {
+    fontSize: 12,
+    fontFamily: mono,
+    fontWeight: '700',
+    color: '#E8B84B',
+    letterSpacing: 0.2,
+  },
+  stakeUnit: {
+    fontSize: 9,
+    fontFamily: mono,
+    fontWeight: '600',
+    color: 'rgba(232,184,75,0.50)',
+    letterSpacing: 1,
+  },
+
+  capturedSection: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
     flexWrap: 'wrap',
     gap: 1,
   },
   capturedPiece: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.45)',
-    lineHeight: 18,
+    fontSize: 12,
+    color: 'rgba(232,184,75,0.42)',
+    lineHeight: 16,
   },
 
-  // ── Move history ─────────────────────────────────────────────────────────────
-  moveHistory: {
-    maxHeight: 34,
+  // ── Controls ──────────────────────────────────────────────────────────────
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    borderTopWidth: 1,
+    borderTopColor: '#1A1A22',
+    backgroundColor: '#0B0B0F',
   },
-  moveHistoryContent: {
+  resignBtn: {
+    paddingHorizontal: 16,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resignLabel: {
+    fontSize: 9,
+    fontFamily: mono,
+    fontWeight: '700',
+    color: 'rgba(239,68,68,0.60)',
+    letterSpacing: 2,
+  },
+  controlsDivider: {
+    width: 1,
+    height: '60%',
+    backgroundColor: '#1A1A22',
+  },
+  historyScroll: {
+    flex: 1,
+  },
+  historyList: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingHorizontal: 12,
+  },
+  historyEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyEmptyText: {
+    fontSize: 9,
+    fontFamily: mono,
+    color: 'rgba(240,237,232,0.16)',
+    letterSpacing: 1.5,
   },
   movePair: {
     flexDirection: 'row',
@@ -360,89 +384,42 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   moveNum: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: mono,
-    color: 'rgba(255,255,255,0.22)',
-    marginRight: 1,
+    color: 'rgba(240,237,232,0.18)',
   },
   moveChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 1,
   },
-  moveChipActive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
+  moveChipLast: {
+    backgroundColor: 'rgba(232,184,75,0.12)',
   },
-  moveChipText: {
-    fontSize: 11,
+  moveText: {
+    fontSize: 10,
     fontFamily: mono,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(240,237,232,0.28)',
   },
-  moveChipTextActive: {
-    color: '#0B0B0B',
-  },
-
-  // ── Rule ────────────────────────────────────────────────────────────────────
-  rule: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  moveTextLast: {
+    color: '#E8B84B',
   },
 
-  // ── Bottom nav ───────────────────────────────────────────────────────────────
-  bottomNav: {
-    height: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 22,
-    backgroundColor: '#0B0B0B',
-  },
-  navBtn: {
-    width: 42,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  navBtnActive: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#FFFFFF',
-  },
-  navBtnIcon: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.40)',
-    fontFamily: mono,
-  },
-  navBtnIconActive: {
-    fontSize: 16,
-    color: '#0B0B0B',
-    fontFamily: mono,
-  },
-  navBtnDanger: {
-    fontSize: 16,
-    color: 'rgba(248,113,113,0.70)',
-    fontFamily: mono,
-  },
-
-  // ── Loading ──────────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   spinner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderTopColor: 'rgba(255,255,255,0.75)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(232,184,75,0.15)',
+    borderTopColor: '#E8B84B',
   },
   loadLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: mono,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '700',
+    color: 'rgba(240,237,232,0.45)',
     letterSpacing: 3,
-    marginTop: 4,
   },
 })

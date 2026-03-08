@@ -8,6 +8,7 @@ interface ChessTimerProps {
   isActive: boolean
   label: string
   shortAddress: string
+  totalMs?: number
 }
 
 function formatTime(ms: number): string {
@@ -18,16 +19,17 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function ChessTimer({ milliseconds, isActive, label, shortAddress }: ChessTimerProps) {
-  const isLow = milliseconds > 0 && milliseconds < 10_000
+export function ChessTimer({ milliseconds, isActive, label, shortAddress, totalMs }: ChessTimerProps) {
+  const isLow   = milliseconds > 0 && milliseconds < 10_000
+  const isWarn  = milliseconds > 0 && milliseconds < 30_000 && !isLow
   const pulseAnim = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     if (isActive && isLow) {
       const loop = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 0.25, duration: 480, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1,    duration: 480, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 0.20, duration: 380, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1,    duration: 380, useNativeDriver: true }),
         ]),
       )
       loop.start()
@@ -38,41 +40,64 @@ export function ChessTimer({ milliseconds, isActive, label, shortAddress }: Ches
   }, [isActive, isLow, pulseAnim])
 
   const isWhitePlayer = label.toLowerCase().includes('white')
-  const pieceIcon     = isWhitePlayer ? '♙' : '♟'
+  const pieceIcon = isWhitePlayer ? '♙' : '♟'
 
+  // Clock color progression
   const clockColor = milliseconds <= 0
-    ? 'rgba(248,113,113,0.90)'
+    ? '#EF4444'
     : isLow && isActive
-      ? 'rgba(248,113,113,0.90)'
-      : isActive
-        ? '#FFFFFF'
-        : 'rgba(255,255,255,0.30)'
+      ? '#EF4444'
+      : isWarn && isActive
+        ? '#E8B84B'
+        : isActive
+          ? '#F0EDE8'
+          : 'rgba(240,237,232,0.22)'
+
+  // Time bar progress
+  const barProgress = totalMs && totalMs > 0
+    ? Math.max(0, Math.min(1, milliseconds / totalMs))
+    : null
 
   return (
     <View style={[styles.container, isActive && styles.containerActive]}>
-      {/* Left accent bar */}
-      {isActive && <View style={styles.activeBar} />}
 
-      {/* Piece icon */}
-      <Text style={[styles.pieceIcon, isActive && styles.pieceIconActive]}>
-        {pieceIcon}
-      </Text>
+      {/* Left: player identity zone */}
+      <View style={styles.identityZone}>
+        {/* Active indicator — left rail */}
+        <View style={[styles.leftRail, isActive && styles.leftRailActive]} />
 
-      {/* Player info */}
-      <View style={styles.info}>
-        <Text style={[styles.playerName, isActive && styles.playerNameActive]} numberOfLines={1}>
-          {label.toUpperCase()}
-        </Text>
-        <Text style={styles.address} numberOfLines={1}>{shortAddress}</Text>
+        <View style={styles.identityContent}>
+          <Text style={[styles.playerLabel, isActive && styles.playerLabelActive]} numberOfLines={1}>
+            {pieceIcon}  {label.toUpperCase()}
+          </Text>
+          <Text style={styles.playerAddr} numberOfLines={1}>{shortAddress}</Text>
+        </View>
       </View>
 
-      {/* Clock */}
-      <Animated.Text
-        style={[styles.clock, { color: clockColor, opacity: isLow && isActive ? pulseAnim : 1 }]}
-        allowFontScaling={false}
-      >
-        {formatTime(milliseconds)}
-      </Animated.Text>
+      {/* Right: clock zone — gets amber tint when active */}
+      <View style={[styles.clockZone, isActive && styles.clockZoneActive]}>
+        <Animated.Text
+          style={[styles.clockText, { color: clockColor, opacity: isLow && isActive ? pulseAnim : 1 }]}
+          allowFontScaling={false}
+        >
+          {formatTime(milliseconds)}
+        </Animated.Text>
+      </View>
+
+      {/* Time depletion bar at very bottom */}
+      {barProgress !== null && (
+        <View style={styles.barTrack}>
+          <View
+            style={[
+              styles.barFill,
+              {
+                width: `${barProgress * 100}%`,
+                backgroundColor: isLow ? '#EF4444' : isWarn ? '#E8B84B' : '#E8B84B',
+              },
+            ]}
+          />
+        </View>
+      )}
     </View>
   )
 }
@@ -80,64 +105,84 @@ export function ChessTimer({ milliseconds, isActive, label, shortAddress }: Ches
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: '#111111',
+    height: 64,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A22',
+    backgroundColor: '#0B0B0F',
     overflow: 'hidden',
-    position: 'relative',
-    gap: 12,
   },
   containerActive: {
-    borderColor: 'rgba(255,255,255,0.50)',
+    backgroundColor: '#0F0F17',
   },
 
-  activeBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 2,
-    backgroundColor: '#FFFFFF',
-  },
-
-  pieceIcon: {
-    fontSize: 22,
-    color: 'rgba(255,255,255,0.25)',
-  },
-  pieceIconActive: {
-    color: 'rgba(255,255,255,0.80)',
-  },
-
-  info: {
+  // ── Identity zone (left ~58%) ─────────────────────────────────────────────
+  identityZone: {
     flex: 1,
-    gap: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  playerName: {
+  leftRail: {
+    width: 3,
+    alignSelf: 'stretch',
+    backgroundColor: 'transparent',
+  },
+  leftRailActive: {
+    backgroundColor: '#E8B84B',
+  },
+  identityContent: {
+    flex: 1,
+    paddingHorizontal: 14,
+    gap: 4,
+    justifyContent: 'center',
+  },
+  playerLabel: {
     fontSize: 9,
     fontFamily: mono,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.30)',
+    color: 'rgba(240,237,232,0.22)',
     letterSpacing: 2,
   },
-  playerNameActive: {
-    color: 'rgba(255,255,255,0.65)',
+  playerLabelActive: {
+    color: 'rgba(240,237,232,0.62)',
   },
-  address: {
+  playerAddr: {
     fontSize: 10,
     fontFamily: mono,
-    color: 'rgba(255,255,255,0.22)',
+    color: 'rgba(240,237,232,0.18)',
     letterSpacing: 0.3,
   },
 
-  clock: {
-    fontSize: 28,
+  // ── Clock zone (right ~42%) ──────────────────────────────────────────────
+  clockZone: {
+    width: '42%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: '#1A1A22',
+    backgroundColor: '#0C0C12',
+  },
+  clockZoneActive: {
+    backgroundColor: 'rgba(232,184,75,0.07)',
+    borderLeftColor: 'rgba(232,184,75,0.20)',
+  },
+  clockText: {
+    fontSize: 36,
     fontWeight: '700',
     fontFamily: mono,
-    letterSpacing: -0.5,
-    minWidth: 64,
-    textAlign: 'right',
+    letterSpacing: -1.5,
+  },
+
+  // ── Time bar ──────────────────────────────────────────────────────────────
+  barTrack: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  barFill: {
+    height: '100%',
+    opacity: 0.55,
   },
 })

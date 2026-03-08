@@ -4,11 +4,10 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
   Platform,
   Dimensions,
   TouchableOpacity,
+  KeyboardAvoidingView,
   Animated,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -19,12 +18,9 @@ import { MatchRow, lamportsToSol, calculatePrize } from '@/features/match/match-
 import { getMatchByCode, joinMatch } from '@/features/match/match-service'
 import { useStake } from '@/features/stake/use-stake'
 
-const { width: SW, height: SH } = Dimensions.get('window')
 const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
-
-const CELL    = Math.round(SW / 8)
-const H_TOPS  = Array.from({ length: Math.ceil(SH / CELL) + 3 }, (_, i) => (i - 1) * CELL)
-const V_LEFTS = Array.from({ length: Math.ceil(SW / CELL) + 3 }, (_, i) => (i - 1) * CELL)
+const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif'
+const SW = Dimensions.get('window').width
 
 type Step = 'enter' | 'lookup' | 'review' | 'staking'
 
@@ -37,14 +33,13 @@ export default function JoinScreen() {
   const [foundMatch, setFoundMatch] = useState<MatchRow | null>(null)
   const [error, setError]           = useState<string | null>(null)
 
-  // Spinning indicator
-  const spin = useRef(new Animated.Value(0)).current
+  const spinVal = useRef(new Animated.Value(0)).current
   useEffect(() => {
     Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 1000, useNativeDriver: true })
+      Animated.timing(spinVal, { toValue: 1, duration: 1100, useNativeDriver: true })
     ).start()
-  }, [spin])
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+  }, [spinVal])
+  const spinDeg = spinVal.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
 
   async function handleLookup() {
     if (code.trim().length < 6) { setError('Enter a 6-character match code'); return }
@@ -72,89 +67,89 @@ export default function JoinScreen() {
     }
   }
 
-  const Grid = (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View style={styles.gridWrap}>
-        {H_TOPS.map((top) => (
-          <View key={`h${top}`} style={[styles.gridLine, styles.hLine, { top }]} />
-        ))}
-        {V_LEFTS.map((left) => (
-          <View key={`v${left}`} style={[styles.gridLine, styles.vLine, { left }]} />
-        ))}
-      </View>
-    </View>
-  )
-
-  // ── Loading ───────────────────────────────────────────────────────────────
+  // ── LOADING ─────────────────────────────────────────────────────────────────
   if (step === 'lookup' || step === 'staking') {
-    const label = step === 'lookup' ? 'FINDING MATCH' : 'CONFIRM IN WALLET'
-    const sub   = step === 'staking' ? `Sending ${foundMatch ? lamportsToSol(foundMatch.stake_amount) : ''} SOL to escrow` : null
     return (
       <View style={[styles.root, styles.center]}>
-        {Grid}
-        <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
-        <Text style={styles.loadLabel}>{label}</Text>
-        {sub && <Text style={styles.loadSub}>{sub}</Text>}
+        <Animated.View style={[styles.spinner, { transform: [{ rotate: spinDeg }] }]} />
+        <Text style={styles.loadLabel}>
+          {step === 'lookup' ? 'FINDING MATCH' : 'CONFIRM IN WALLET'}
+        </Text>
+        <Text style={styles.loadSub}>
+          {step === 'staking'
+            ? `Sending ${foundMatch ? lamportsToSol(foundMatch.stake_amount) : ''} SOL to escrow`
+            : 'Searching...'}
+        </Text>
       </View>
     )
   }
 
-  // ── Review ────────────────────────────────────────────────────────────────
+  // ── REVIEW ─────────────────────────────────────────────────────────────────
   if (step === 'review' && foundMatch) {
-    const prize    = calculatePrize(foundMatch.stake_amount)
-    const timeMin  = Math.round(foundMatch.time_control / 60)
-    const hostShort = `${foundMatch.host_public_key.slice(0, 4)}…${foundMatch.host_public_key.slice(-4)}`
+    const prize     = calculatePrize(foundMatch.stake_amount)
+    const timeMin   = Math.round(foundMatch.time_control / 60)
+    const hostShort = `${foundMatch.host_public_key.slice(0, 6)}···${foundMatch.host_public_key.slice(-6)}`
 
     return (
       <View style={styles.root}>
-        {Grid}
         <SafeAreaView style={styles.safe}>
-          <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => { setStep('enter'); setFoundMatch(null) }} hitSlop={12}>
-                <Text style={styles.backBtn}>←</Text>
-              </TouchableOpacity>
-              <Text style={styles.pageTitle}>MATCH FOUND</Text>
-              <View style={{ width: 28 }} />
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => { setStep('enter'); setFoundMatch(null) }} hitSlop={12}>
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>MATCH FOUND</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          <View style={styles.headerRule} />
+
+          {/* Match card */}
+          <View style={styles.matchCard}>
+
+            {/* Code display strip */}
+            <View style={styles.reviewCodeStrip}>
+              {foundMatch.code.split('').map((ch, i) => (
+                <View key={i} style={styles.reviewCodeChar}>
+                  <Text style={styles.reviewCodeCharText}>{ch}</Text>
+                </View>
+              ))}
             </View>
 
-            <View style={styles.rule} />
+            <View style={styles.cardDivider} />
 
-            {/* Code display */}
-            <View style={styles.codeBlock}>
-              <Text style={styles.codeCap}>MATCH CODE</Text>
-              <Text style={styles.codeValue}>{foundMatch.code}</Text>
-            </View>
-
-            <View style={styles.rule} />
-
-            {/* Summary table */}
-            <View style={styles.summaryTable}>
-              <View style={styles.summRow}>
-                <Text style={styles.summKey}>HOST</Text>
-                <Text style={[styles.summVal, { fontFamily: mono }]}>{hostShort}</Text>
+            {/* Match details */}
+            <View style={styles.matchDetails}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailKey}>HOST</Text>
+                <Text style={[styles.detailVal, { fontFamily: mono }]}>{hostShort}</Text>
               </View>
-              <View style={styles.summRow}>
-                <Text style={styles.summKey}>STAKE REQUIRED</Text>
-                <Text style={styles.summVal}>{lamportsToSol(foundMatch.stake_amount)} SOL</Text>
+              <View style={styles.cardDivider} />
+              <View style={styles.detailRow}>
+                <Text style={styles.detailKey}>STAKE REQUIRED</Text>
+                <Text style={styles.detailVal}>{lamportsToSol(foundMatch.stake_amount)} SOL</Text>
               </View>
-              <View style={styles.summRow}>
-                <Text style={styles.summKey}>TIME CONTROL</Text>
-                <Text style={styles.summVal}>{timeMin} MIN</Text>
-              </View>
-              <View style={styles.rowDivider} />
-              <View style={styles.summRow}>
-                <Text style={[styles.summKey, { color: '#FFFFFF' }]}>YOU WIN</Text>
-                <Text style={[styles.summVal, { color: '#FFFFFF', fontWeight: '700' }]}>{lamportsToSol(prize)} SOL</Text>
+              <View style={styles.cardDivider} />
+              <View style={styles.detailRow}>
+                <Text style={styles.detailKey}>TIME CONTROL</Text>
+                <Text style={styles.detailVal}>{timeMin} MIN BLITZ</Text>
               </View>
             </View>
 
-            <View style={styles.rule} />
+            <View style={styles.cardDivider} />
 
+            {/* Win highlight */}
+            <View style={styles.winHighlight}>
+              <View style={styles.winHighlightLeft}>
+                <Text style={styles.winHighlightLabel}>IF YOU WIN</Text>
+              </View>
+              <Text style={styles.winHighlightAmount}>{lamportsToSol(prize)} SOL</Text>
+            </View>
+          </View>
+
+          {/* CTA */}
+          <View style={styles.ctaArea}>
             {error && <Text style={styles.errorText}>{error}</Text>}
-
             <Button
               label={`Stake ${lamportsToSol(foundMatch.stake_amount)} SOL & Join`}
               onPress={handleJoinAndStake}
@@ -167,83 +162,102 @@ export default function JoinScreen() {
               onPress={() => { setStep('enter'); setFoundMatch(null) }}
               variant="ghost"
             />
+          </View>
 
-          </ScrollView>
         </SafeAreaView>
       </View>
     )
   }
 
-  // ── Enter code ─────────────────────────────────────────────────────────────
+  // ── CODE ENTRY ──────────────────────────────────────────────────────────────
   return (
     <View style={styles.root}>
-      {Grid}
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.safe}
         >
-          <View style={styles.enterWrap}>
-
-            {/* Header */}
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
-                <Text style={styles.backBtn}>←</Text>
-              </TouchableOpacity>
-              <Text style={styles.pageTitle}>JOIN MATCH</Text>
-              <View style={{ width: 28 }} />
-            </View>
-
-            <View style={styles.rule} />
-
-            {/* Input area */}
-            <View style={styles.inputSection}>
-              <Text style={styles.sectionLabel}>MATCH CODE</Text>
-
-              <TextInput
-                value={code}
-                onChangeText={(t) => setCode(t.toUpperCase())}
-                placeholder="– – – – – –"
-                placeholderTextColor="rgba(255,255,255,0.18)"
-                style={styles.input}
-                maxLength={6}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                returnKeyType="go"
-                onSubmitEditing={handleLookup}
-              />
-
-              {/* Dot progress */}
-              <View style={styles.dotRow}>
-                {Array.from({ length: 6 }, (_, i) => (
-                  <View
-                    key={i}
-                    style={[styles.dot, i < code.length && styles.dotFilled]}
-                  />
-                ))}
-              </View>
-            </View>
-
-            <View style={styles.rule} />
-
-            <Text style={styles.hint}>Ask your opponent for their 6-character match code</Text>
-
-            {error && <Text style={styles.errorText}>{error}</Text>}
-
-            <View style={styles.actionGroup}>
-              <Button
-                label="Find Match"
-                onPress={handleLookup}
-                variant="primary"
-                size="lg"
-                disabled={!account || code.trim().length < 6}
-              />
-              {!account && (
-                <Text style={styles.walletHint}>Connect wallet to play</Text>
-              )}
-            </View>
-
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>JOIN MATCH</Text>
+            <View style={styles.headerSpacer} />
           </View>
+          <View style={styles.headerRule} />
+
+          {/* Title block */}
+          <View style={styles.entryTitleBlock}>
+            <Text style={styles.entryTitle}>Enter</Text>
+            <Text style={[styles.entryTitle, styles.entryTitleAccent]}>Match Code</Text>
+          </View>
+
+          {/* Character display */}
+          <View style={styles.charDisplay}>
+            {Array.from({ length: 6 }, (_, i) => {
+              const char    = code[i] ?? ''
+              const filled  = i < code.length
+              const isCursor = i === code.length && code.length < 6
+              return (
+                <View
+                  key={i}
+                  style={[
+                    styles.charCell,
+                    filled && styles.charCellFilled,
+                    isCursor && styles.charCellCursor,
+                  ]}
+                >
+                  {filled
+                    ? <Text style={styles.charCellText}>{char}</Text>
+                    : <Text style={styles.charCellPlaceholder}>{isCursor ? '|' : '·'}</Text>
+                  }
+                </View>
+              )
+            })}
+
+            {/* Hidden TextInput — captures keyboard */}
+            <TextInput
+              value={code}
+              onChangeText={(t) => { setCode(t.toUpperCase()); setError(null) }}
+              style={styles.hiddenInput}
+              maxLength={6}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              returnKeyType="go"
+              onSubmitEditing={handleLookup}
+              caretHidden
+            />
+          </View>
+
+          {/* Progress pips */}
+          <View style={styles.progressPips}>
+            {Array.from({ length: 6 }, (_, i) => (
+              <View key={i} style={[styles.pip, i < code.length && styles.pipFilled]} />
+            ))}
+          </View>
+
+          {/* Hint */}
+          <Text style={styles.hint}>
+            Ask your opponent for their 6-character code
+          </Text>
+
+          {error && <Text style={styles.errorText}>{error}</Text>}
+
+          {/* CTA */}
+          <View style={styles.entryCta}>
+            <Button
+              label="Find Match"
+              onPress={handleLookup}
+              variant="primary"
+              size="lg"
+              disabled={!account || code.trim().length < 6}
+            />
+            {!account && (
+              <Text style={styles.walletNote}>Connect wallet to play</Text>
+            )}
+          </View>
+
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -251,195 +265,261 @@ export default function JoinScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0B0B0B' },
+  root:   { flex: 1, backgroundColor: '#0B0B0F' },
   safe:   { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center', gap: 14 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
 
-  // ── Grid ────────────────────────────────────────────────────────────────────
-  gridWrap: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
-  gridLine: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.06)' },
-  hLine:    { left: -CELL, right: -CELL, height: StyleSheet.hairlineWidth },
-  vLine:    { top: -CELL, bottom: -CELL, width: StyleSheet.hairlineWidth },
-
-  // ── Header ──────────────────────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     paddingVertical: 14,
   },
-  backBtn: {
+  backArrow: {
     fontSize: 20,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(240,237,232,0.45)',
     fontFamily: mono,
     lineHeight: 24,
+    width: 28,
   },
-  pageTitle: {
-    fontSize: 11,
+  headerTitle: {
+    fontSize: 10,
     fontFamily: mono,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#F0EDE8',
     letterSpacing: 4,
   },
-
-  // ── Rule ────────────────────────────────────────────────────────────────────
-  rule: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    marginHorizontal: 22,
+  headerSpacer: { width: 28 },
+  headerRule: {
+    height: 1,
+    backgroundColor: '#1A1A22',
   },
 
-  // ── Enter ───────────────────────────────────────────────────────────────────
-  enterWrap: {
-    flex: 1,
-    gap: 22,
+  // ── Entry — title block ────────────────────────────────────────────────────
+  entryTitleBlock: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 28,
+    gap: 0,
   },
-  inputSection: {
+  entryTitle: {
+    fontSize: 46,
+    fontFamily: serif,
+    fontWeight: '700',
+    color: '#F0EDE8',
+    lineHeight: 52,
+    letterSpacing: -0.3,
+  },
+  entryTitleAccent: {
+    color: '#E8B84B',
+  },
+
+  // ── Char display ──────────────────────────────────────────────────────────
+  charDisplay: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    position: 'relative',
+  },
+  charCell: {
+    width: (SW - 40 - 40) / 6,
+    height: 68,
+    borderWidth: 1,
+    borderColor: '#1A1A22',
+    borderRadius: 2,
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 22,
-    gap: 14,
+    justifyContent: 'center',
+    backgroundColor: '#0E0E14',
   },
-  sectionLabel: {
+  charCellFilled: {
+    borderColor: 'rgba(232,184,75,0.50)',
+    backgroundColor: 'rgba(232,184,75,0.06)',
+  },
+  charCellCursor: {
+    borderColor: '#E8B84B',
+  },
+  charCellText: {
+    fontSize: 26,
+    fontFamily: mono,
+    fontWeight: '700',
+    color: '#E8B84B',
+  },
+  charCellPlaceholder: {
+    fontSize: 22,
+    fontFamily: mono,
+    color: 'rgba(240,237,232,0.14)',
+  },
+  hiddenInput: {
+    position: 'absolute',
+    opacity: 0,
+    width: '100%',
+    height: 68,
+  },
+
+  // ── Progress pips ─────────────────────────────────────────────────────────
+  progressPips: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingTop: 14,
+  },
+  pip: {
+    width: 6,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#1A1A22',
+  },
+  pipFilled: {
+    backgroundColor: '#E8B84B',
+    width: 14,
+  },
+
+  // ── Hint ──────────────────────────────────────────────────────────────────
+  hint: {
+    fontSize: 11,
+    fontFamily: mono,
+    color: 'rgba(240,237,232,0.24)',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    letterSpacing: 0.3,
+  },
+
+  // ── Entry CTA ─────────────────────────────────────────────────────────────
+  entryCta: {
+    paddingHorizontal: 20,
+    gap: 10,
+    marginTop: 'auto',
+    paddingBottom: 28,
+    paddingTop: 16,
+  },
+  walletNote: {
+    fontSize: 10,
+    fontFamily: mono,
+    color: 'rgba(240,237,232,0.24)',
+    textAlign: 'center',
+  },
+
+  // ── Review — Match card ────────────────────────────────────────────────────
+  matchCard: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#1A1A22',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  reviewCodeStrip: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 22,
+    paddingHorizontal: 16,
+    backgroundColor: '#0E0E14',
+  },
+  reviewCodeChar: {
+    width: 40,
+    height: 52,
+    borderWidth: 1,
+    borderColor: 'rgba(232,184,75,0.42)',
+    backgroundColor: 'rgba(232,184,75,0.06)',
+    borderRadius: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewCodeCharText: {
+    fontSize: 22,
+    fontFamily: mono,
+    fontWeight: '700',
+    color: '#E8B84B',
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: '#1A1A22',
+  },
+  matchDetails: {},
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  detailKey: {
     fontSize: 9,
     fontFamily: mono,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.35)',
+    color: 'rgba(240,237,232,0.28)',
+    letterSpacing: 2,
+  },
+  detailVal: {
+    fontSize: 12,
+    fontFamily: mono,
+    fontWeight: '600',
+    color: 'rgba(240,237,232,0.70)',
+  },
+  winHighlight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    backgroundColor: 'rgba(232,184,75,0.05)',
+  },
+  winHighlightLeft: {},
+  winHighlightLabel: {
+    fontSize: 8,
+    fontFamily: mono,
+    fontWeight: '700',
+    color: 'rgba(232,184,75,0.60)',
     letterSpacing: 2.5,
   },
-  input: {
-    fontSize: 48,
-    fontWeight: '800',
+  winHighlightAmount: {
+    fontSize: 26,
     fontFamily: mono,
-    color: '#FFFFFF',
-    letterSpacing: 14,
-    textAlign: 'center',
-    paddingVertical: 8,
-    width: '100%',
-  },
-  dotRow: { flexDirection: 'row', gap: 10 },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  dotFilled: {
-    backgroundColor: '#FFFFFF',
+    fontWeight: '700',
+    color: '#E8B84B',
+    letterSpacing: -0.5,
   },
 
-  // ── Action group ─────────────────────────────────────────────────────────────
-  actionGroup: {
-    paddingHorizontal: 22,
+  // ── CTA area ──────────────────────────────────────────────────────────────
+  ctaArea: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
     gap: 10,
-    marginTop: 'auto',
-    paddingBottom: 24,
   },
-  hint: {
-    fontSize: 10,
-    fontFamily: mono,
-    color: 'rgba(255,255,255,0.28)',
-    letterSpacing: 0.5,
-    textAlign: 'center',
-    paddingHorizontal: 22,
-  },
-  walletHint: {
+  errorText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.28)',
+    fontFamily: mono,
+    color: 'rgba(239,68,68,0.80)',
     textAlign: 'center',
     letterSpacing: 0.3,
   },
 
-  // ── Review / Scroll ──────────────────────────────────────────────────────────
-  scroll: {
-    paddingBottom: 40,
-    gap: 10,
-  },
-
-  // ── Code block ───────────────────────────────────────────────────────────────
-  codeBlock: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 22,
-    gap: 10,
-  },
-  codeCap: {
-    fontSize: 9,
-    fontFamily: mono,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 3,
-  },
-  codeValue: {
-    fontSize: 54,
-    fontFamily: mono,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 18,
-  },
-
-  // ── Summary table ─────────────────────────────────────────────────────────────
-  summaryTable: {
-    paddingHorizontal: 22,
-    gap: 0,
-  },
-  summRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 11,
-  },
-  rowDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.28)',
-  },
-  summKey: {
-    fontSize: 9,
-    fontFamily: mono,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 1.5,
-  },
-  summVal: {
-    fontSize: 11,
-    fontFamily: mono,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.65)',
-    letterSpacing: 0.5,
-  },
-
-  // ── Loading ──────────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   spinner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.12)',
-    borderTopColor: 'rgba(255,255,255,0.75)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(232,184,75,0.15)',
+    borderTopColor: '#E8B84B',
   },
   loadLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: mono,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '700',
+    color: 'rgba(240,237,232,0.50)',
     letterSpacing: 3,
-    marginTop: 4,
   },
   loadSub: {
     fontSize: 10,
     fontFamily: mono,
-    color: 'rgba(255,255,255,0.28)',
-    letterSpacing: 0.5,
-  },
-
-  // ── Misc ─────────────────────────────────────────────────────────────────────
-  errorText: {
-    fontSize: 11,
-    fontFamily: mono,
-    color: 'rgba(248,113,113,0.80)',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-    paddingHorizontal: 22,
+    color: 'rgba(240,237,232,0.26)',
+    letterSpacing: 0.4,
   },
 })

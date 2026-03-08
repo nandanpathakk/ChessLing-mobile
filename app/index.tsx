@@ -6,41 +6,36 @@ import {
   Animated,
   Easing,
   Platform,
-  Dimensions,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { Button } from '@/components/ui/button'
 import { WalletButton } from '@/components/ui/wallet-chip'
 import { SplashScreen } from '@/components/ui/splash-screen'
 
-const { width: SW, height: SH } = Dimensions.get('window')
-const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
-
-// ─── Same grid geometry as the splash screen ─────────────────────────────────
-const CELL    = Math.round(SW / 8)
-const H_TOPS  = Array.from({ length: Math.ceil(SH / CELL) + 3 }, (_, i) => (i - 1) * CELL)
-const V_LEFTS = Array.from({ length: Math.ceil(SW / CELL) + 3 }, (_, i) => (i - 1) * CELL)
-
-const STATS = [
-  { value: '0.05–0.5', label: 'SOL STAKE' },
-  { value: '1–3 MIN',  label: 'TIME LIMIT' },
-  { value: '1.9×',     label: 'WINNER PAYS' },
-]
+const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
+const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif'
 
 export default function HomeScreen() {
   const { account } = useMobileWallet()
   const [showSplash, setShowSplash] = useState(true)
-  const contentOp = useRef(new Animated.Value(0)).current
+
+  const fadeAnim  = useRef(new Animated.Value(0)).current
+  const slideAnim = useRef(new Animated.Value(28)).current
 
   useEffect(() => {
     if (!showSplash) {
-      Animated.timing(contentOp, {
-        toValue: 1, duration: 500,
-        useNativeDriver: true, easing: Easing.out(Easing.cubic),
-      }).start()
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1, duration: 620,
+          useNativeDriver: true, easing: Easing.out(Easing.cubic),
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0, duration: 620,
+          useNativeDriver: true, easing: Easing.out(Easing.cubic),
+        }),
+      ]).start()
     }
   }, [showSplash])
 
@@ -49,85 +44,68 @@ export default function HomeScreen() {
       {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
 
       <View style={styles.root}>
-
-        {/* ── Grid background ── */}
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <View style={styles.gridWrap}>
-            {H_TOPS.map((top) => (
-              <View key={`h${top}`} style={[styles.gridLine, styles.hLine, { top }]} />
-            ))}
-            {V_LEFTS.map((left) => (
-              <View key={`v${left}`} style={[styles.gridLine, styles.vLine, { left }]} />
-            ))}
-          </View>
-        </View>
-
-        {/* ── Edge vignettes ── */}
-        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <LinearGradient
-            colors={['rgba(0,0,0,0.62)', 'transparent']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0.5 }} end={{ x: 0.42, y: 0.5 }}
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.62)']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0.58, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-          />
-          <LinearGradient
-            colors={['rgba(0,0,0,0.50)', 'transparent']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 0.18 }}
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.55)']}
-            style={[StyleSheet.absoluteFill, { top: '65%' }]}
-          />
-        </View>
-
-        {/* ── Content ── */}
         <SafeAreaView style={styles.safe}>
-          <Animated.View style={[styles.content, { opacity: contentOp }]}>
+          <Animated.View
+            style={[
+              styles.screen,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            ]}
+          >
 
-            {/* ── Header ── */}
+            {/* ─────────────────────────────────────────────────────────────
+                HEADER — thin strip: logo | wallet
+            ───────────────────────────────────────────────────────────── */}
             <View style={styles.header}>
-              <Text style={styles.logo}>CHESSLING</Text>
+              <Text style={styles.wordmark}>CHESSLING</Text>
               <WalletButton />
             </View>
 
-            <View style={styles.rule} />
-
-            {/* ── Hero ── */}
+            {/* ─────────────────────────────────────────────────────────────
+                HERO — left-aligned editorial typographic block
+                Vertical amber rail on the left + three-line headline
+            ───────────────────────────────────────────────────────────── */}
             <View style={styles.hero}>
-              <Text style={styles.heroPiece}>♔</Text>
-              <Text style={styles.heroHeadline}>Chess for{'\n'}Real Stakes.</Text>
-              <Text style={styles.heroSub}>
-                Wager SOL · Beat your opponent · Take the prize
-              </Text>
+              <View style={styles.amberRail} />
+
+              <View style={styles.heroText}>
+                <Text style={styles.heroLine1}>CHESS</Text>
+                <Text style={styles.heroLine2}>FOR</Text>
+                <Text style={styles.heroLine3}>STAKES.</Text>
+                <Text style={styles.heroSub}>
+                  Wager SOL. Beat your opponent.{'\n'}Take the pot.
+                </Text>
+              </View>
             </View>
 
-            {/* ── Bottom section ── */}
-            <View style={styles.bottom}>
-
-              <View style={styles.rule} />
-
-              {/* Stats */}
-              <View style={styles.statsRow}>
-                {STATS.map((s, i) => (
-                  <View
-                    key={s.label}
-                    style={[styles.statItem, i < STATS.length - 1 && styles.statBorder]}
-                  >
-                    <Text style={styles.statValue}>{s.value}</Text>
-                    <Text style={styles.statLabel}>{s.label}</Text>
-                  </View>
-                ))}
+            {/* ─────────────────────────────────────────────────────────────
+                METRICS — bordered stat box: Stake · Prize · Time
+            ───────────────────────────────────────────────────────────── */}
+            <View style={styles.metricsBox}>
+              <View style={styles.metricCell}>
+                <Text style={styles.metricValue}>0.05–0.5</Text>
+                <Text style={styles.metricLabel}>SOL STAKE</Text>
               </View>
+              <View style={styles.metricDivider} />
+              <View style={styles.metricCell}>
+                <Text style={styles.metricValue}>1.9×</Text>
+                <Text style={styles.metricLabel}>NET WIN</Text>
+              </View>
+              <View style={styles.metricDivider} />
+              <View style={styles.metricCell}>
+                <Text style={styles.metricValue}>1–3</Text>
+                <Text style={styles.metricLabel}>MIN BLITZ</Text>
+              </View>
+            </View>
 
-              <View style={styles.rule} />
+            {/* ─────────────────────────────────────────────────────────────
+                ACTION ZONE — amber rule + CTAs + footer
+            ───────────────────────────────────────────────────────────── */}
+            <View style={styles.actionZone}>
 
-              {/* CTAs */}
-              <View style={styles.ctaGroup}>
+              {/* Amber section separator */}
+              <View style={styles.amberRule} />
+
+              <View style={styles.ctaStack}>
                 <Button
                   label="New Match"
                   onPress={() => { if (account) router.push('/create') }}
@@ -136,24 +114,23 @@ export default function HomeScreen() {
                   disabled={!account}
                 />
                 <Button
-                  label="Join Match"
+                  label="Join with Code"
                   onPress={() => { if (account) router.push('/join') }}
                   variant="outline"
                   size="lg"
                   disabled={!account}
                 />
                 {!account && (
-                  <Text style={styles.walletHint}>Connect wallet to play</Text>
+                  <Text style={styles.walletNote}>Connect wallet above to play</Text>
                 )}
               </View>
 
-              {/* Footer */}
               <View style={styles.footer}>
-                <View style={styles.networkDot} />
-                <Text style={styles.networkText}>DEVNET</Text>
+                <View style={styles.netPip} />
+                <Text style={styles.netLabel}>DEVNET</Text>
               </View>
-
             </View>
+
           </Animated.View>
         </SafeAreaView>
       </View>
@@ -162,152 +139,163 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#0B0B0B',
-  },
-
-  // ── Grid ───────────────────────────────────────────────────────────────────
-  gridWrap: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  gridLine: {
-    position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  hLine: {
-    left: -CELL,
-    right: -CELL,
-    height: StyleSheet.hairlineWidth,
-  },
-  vLine: {
-    top: -CELL,
-    bottom: -CELL,
-    width: StyleSheet.hairlineWidth,
-  },
-
-  // ── Layout ─────────────────────────────────────────────────────────────────
+  root: { flex: 1, backgroundColor: '#0B0B0F' },
   safe: { flex: 1 },
-  content: {
-    flex: 1,
-    paddingHorizontal: 22,
-    justifyContent: 'space-between',
-    paddingTop: 6,
-    paddingBottom: 4,
-  },
+  screen: { flex: 1 },
 
-  // ── Header ─────────────────────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A22',
   },
-  logo: {
-    fontSize: 13,
+  wordmark: {
+    fontSize: 11,
     fontFamily: mono,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#F0EDE8',
     letterSpacing: 5,
   },
 
-  // ── Rule ───────────────────────────────────────────────────────────────────
-  rule: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-
-  // ── Hero ───────────────────────────────────────────────────────────────────
+  // ── Hero ─────────────────────────────────────────────────────────────────
   hero: {
     flex: 1,
-    alignItems: 'center',
+    flexDirection: 'row',
+    paddingLeft: 20,
+    paddingTop: 28,
+    paddingBottom: 20,
+    paddingRight: 20,
+    gap: 18,
+  },
+  amberRail: {
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: '#E8B84B',
+    alignSelf: 'stretch',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  heroText: {
+    flex: 1,
     justifyContent: 'center',
-    gap: 14,
+    gap: 0,
   },
-  heroPiece: {
-    fontSize: 72,
-    color: '#FFFFFF',
-    lineHeight: 82,
-  },
-  heroHeadline: {
-    fontSize: 34,
-    fontFamily: mono,
+  heroLine1: {
+    fontSize: 54,
+    fontFamily: serif,
     fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    letterSpacing: 0.4,
-    lineHeight: 42,
+    color: '#F0EDE8',
+    lineHeight: 60,
+    letterSpacing: -0.5,
+  },
+  heroLine2: {
+    fontSize: 54,
+    fontFamily: serif,
+    fontWeight: '700',
+    color: '#F0EDE8',
+    lineHeight: 60,
+    letterSpacing: -0.5,
+  },
+  heroLine3: {
+    fontSize: 54,
+    fontFamily: serif,
+    fontWeight: '700',
+    color: '#E8B84B',
+    lineHeight: 60,
+    letterSpacing: -0.5,
   },
   heroSub: {
+    marginTop: 18,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.36)',
+    fontFamily: mono,
+    color: 'rgba(240,237,232,0.32)',
     letterSpacing: 0.3,
-    textAlign: 'center',
+    lineHeight: 18,
   },
 
-  // ── Bottom block ───────────────────────────────────────────────────────────
-  bottom: {
-    gap: 14,
-  },
-
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  statsRow: {
+  // ── Metrics box ───────────────────────────────────────────────────────────
+  metricsBox: {
     flexDirection: 'row',
+    marginHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#1A1A22',
+    borderRadius: 2,
+    overflow: 'hidden',
   },
-  statItem: {
+  metricCell: {
     flex: 1,
+    paddingVertical: 14,
     alignItems: 'center',
-    paddingVertical: 12,
     gap: 5,
   },
-  statBorder: {
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: 'rgba(255,255,255,0.18)',
+  metricDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    backgroundColor: '#1A1A22',
   },
-  statValue: {
-    fontSize: 16,
+  metricValue: {
+    fontSize: 14,
     fontFamily: mono,
     fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
+    color: '#E8B84B',
+    letterSpacing: 0.2,
   },
-  statLabel: {
-    fontSize: 8,
+  metricLabel: {
+    fontSize: 7.5,
+    fontFamily: mono,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.30)',
-    letterSpacing: 2,
+    color: 'rgba(240,237,232,0.22)',
+    letterSpacing: 1.8,
   },
 
-  // ── CTAs ───────────────────────────────────────────────────────────────────
-  ctaGroup: {
-    gap: 9,
+  // ── Action zone ───────────────────────────────────────────────────────────
+  actionZone: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 0,
   },
-  walletHint: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.28)',
+  amberRule: {
+    height: 2,
+    backgroundColor: '#E8B84B',
+    borderRadius: 1,
+    marginBottom: 18,
+    marginTop: 14,
+    opacity: 0.70,
+  },
+  ctaStack: {
+    gap: 10,
+  },
+  walletNote: {
+    fontSize: 10,
+    fontFamily: mono,
+    color: 'rgba(240,237,232,0.24)',
     textAlign: 'center',
     letterSpacing: 0.3,
   },
-
-  // ── Footer ─────────────────────────────────────────────────────────────────
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingBottom: 2,
+    gap: 7,
+    marginTop: 14,
+    marginBottom: 2,
   },
-  networkDot: {
-    width: 5,
-    height: 5,
+  netPip: {
+    width: 6,
+    height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: '#E8B84B',
+    opacity: 0.55,
   },
-  networkText: {
-    fontSize: 9,
+  netLabel: {
+    fontSize: 8.5,
+    fontFamily: mono,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.28)',
+    color: 'rgba(232,184,75,0.45)',
     letterSpacing: 2.5,
   },
 })

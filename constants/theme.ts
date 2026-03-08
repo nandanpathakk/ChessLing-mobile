@@ -9,71 +9,70 @@ export const PIECE_FONT_SIZE = SQUARE_SIZE * 0.72
 
 // ── Color palette ────────────────────────────────────────────────────────────
 export const colors = {
-  // ── Background ────────────────────────────────────────────────────────────
-  bg:         '#252230',          // dark warm purple-gray
-  bgAlt:      '#1F1D2B',          // deeper background
-  bgCard:     '#2E2B3E',          // card surfaces
-  bgElevated: '#373351',          // elevated surfaces (dropdowns, tooltips)
-  bgOverlay:  'rgba(25,23,34,0.96)',
+  // ── Background surfaces ───────────────────────────────────────────────────
+  bg:         '#0B0B0F',    // near-black, subtle cool undertone
+  bgAlt:      '#0E0E14',    // inset surfaces
+  bgCard:     '#111117',    // panel surfaces
+  bgElevated: '#161620',    // raised surfaces
+  bgOverlay:  'rgba(11,11,15,0.97)',
 
-  // ── Glassmorphism panels ──────────────────────────────────────────────────
-  glass:             'rgba(255,255,255,0.07)',
-  glassMid:          'rgba(255,255,255,0.11)',
-  glassHigh:         'rgba(255,255,255,0.17)',
-  glassBorder:       'rgba(255,255,255,0.09)',
-  glassBorderStrong: 'rgba(255,255,255,0.20)',
+  // ── Glass tokens (kept for backward compatibility) ────────────────────────
+  glass:             'rgba(255,255,255,0.03)',
+  glassMid:          'rgba(255,255,255,0.06)',
+  glassHigh:         'rgba(255,255,255,0.10)',
+  glassBorder:       'rgba(255,255,255,0.06)',
+  glassBorderStrong: 'rgba(255,255,255,0.12)',
 
-  // Aliases used by existing components
-  bgCard2:    'rgba(255,255,255,0.07)',
-  bgElevated2:'rgba(255,255,255,0.11)',
+  bgCard2:     'rgba(255,255,255,0.03)',
+  bgElevated2: 'rgba(255,255,255,0.06)',
 
-  // ── Mesh blob colors ──────────────────────────────────────────────────────
-  meshBlue:   'rgba(40,80,155,0.28)',
-  meshPurple: 'rgba(100,60,155,0.35)',
+  // ── Mesh (kept for backward compatibility) ────────────────────────────────
+  meshBlue:   'rgba(60,40,10,0.22)',
+  meshPurple: 'rgba(120,80,10,0.28)',
 
-  // ── Borders ───────────────────────────────────────────────────────────────
-  border:        'rgba(255,255,255,0.09)',
-  borderLight:   'rgba(255,255,255,0.16)',
-  borderAccent:  'rgba(61,165,232,0.40)',
+  // ── Structural borders ────────────────────────────────────────────────────
+  border:        'rgba(255,255,255,0.07)',
+  borderLight:   'rgba(255,255,255,0.11)',
+  borderAccent:  'rgba(232,184,75,0.42)',
 
-  // ── Accent: Sky Blue ──────────────────────────────────────────────────────
-  accent:      '#3DA5E8',
-  accentLight: '#6DC1F4',
-  accentDark:  '#1F85CE',
-  accentGlow:  'rgba(61,165,232,0.18)',
+  // ── Accent: Amber ─────────────────────────────────────────────────────────
+  accent:      '#E8B84B',
+  accentLight: '#F5D078',
+  accentDark:  '#B58A28',
+  accentGlow:  'rgba(232,184,75,0.18)',
 
-  // Aliases for legacy code that references "gold"
-  gold:      '#3DA5E8',
-  goldLight: '#6DC1F4',
-  goldDark:  '#1F85CE',
-  goldGlow:  'rgba(61,165,232,0.15)',
+  // Legacy aliases
+  gold:      '#E8B84B',
+  goldLight: '#F5D078',
+  goldDark:  '#B58A28',
+  goldGlow:  'rgba(232,184,75,0.14)',
 
   // ── Status ────────────────────────────────────────────────────────────────
-  success:      '#34D399',
-  successLight: '#6EE7B7',
-  successGlow:  'rgba(52,211,153,0.22)',
-  error:        '#F87171',
-  errorLight:   '#FCA5A5',
-  errorGlow:    'rgba(248,113,113,0.18)',
+  success:      '#22C55E',
+  successLight: '#4ADE80',
+  successGlow:  'rgba(34,197,94,0.20)',
+  error:        '#EF4444',
+  errorLight:   '#F87171',
+  errorGlow:    'rgba(239,68,68,0.18)',
 
   // ── Text ──────────────────────────────────────────────────────────────────
-  text:          '#F0EDF8',
-  textSecondary: 'rgba(220,215,245,0.72)',
-  textMuted:     'rgba(175,170,205,0.45)',
+  text:          '#F0EDE8',
+  textSecondary: 'rgba(240,237,232,0.52)',
+  textMuted:     'rgba(240,237,232,0.24)',
 
-  // ── Chess board ───────────────────────────────────────────────────────────
-  boardLight:        '#D8D8D8',           // light gray squares
-  boardDark:         '#1C1C1C',           // near-black dark squares
-  boardSelected:     'rgba(200,200,200,0.35)',
-  boardLastMove:     'rgba(200,200,200,0.14)',
-  boardValidMove:    'rgba(160,160,160,0.72)',
-  boardValidCapture: 'rgba(200,200,200,0.50)',
-  boardCheck:        'rgba(248,113,113,0.72)',
-  boardLabel:        'rgba(80,80,80,0.70)',
+  // ── Chess board — warm parchment + near-black brown ────────────────────────
+  boardLight:        '#C8BFA5',
+  boardDark:         '#161410',
+  boardSelected:     'rgba(232,184,75,0.42)',
+  boardLastMove:     'rgba(232,184,75,0.18)',
+  boardValidMove:    'rgba(232,184,75,0.72)',
+  boardValidCapture: 'rgba(232,184,75,0.46)',
+  boardCheck:        'rgba(239,68,68,0.70)',
+  boardLabel:        'rgba(100,86,50,0.60)',
 
   // ── Pieces ────────────────────────────────────────────────────────────────
-  pieceWhite: '#F8F8F8',
-  pieceBlack: '#101010',
+  pieceWhite: '#F4F1EA',
+  pieceBlack: '#0E0C08',
 } as const
 
 // ── Spacing ──────────────────────────────────────────────────────────────────
@@ -88,26 +87,21 @@ export const spacing = {
 
 // ── Border radius ─────────────────────────────────────────────────────────────
 export const radius = {
-  sm: 10,
-  md: 16,
-  lg: 22,
-  xl: 32,
+  sm: 2,
+  md: 6,
+  lg: 12,
+  xl: 20,
   full: 9999,
 } as const
 
 // ── Typography ────────────────────────────────────────────────────────────────
-// Headings → Georgia (serif, available on both iOS & Android)
-// Body     → system default (SF Pro / Roboto — Google-Sans-like)
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif'
 
 export const typography = {
-  // Serif / small-caps headings
-  hero:        { fontSize: 38, fontWeight: '700' as const, fontFamily: serif, letterSpacing: 2 },
-  h1:          { fontSize: 28, fontWeight: '700' as const, fontFamily: serif, letterSpacing: 1.5 },
-  h2:          { fontSize: 22, fontWeight: '700' as const, fontFamily: serif, letterSpacing: 1 },
+  hero:        { fontSize: 38, fontWeight: '700' as const, fontFamily: serif, letterSpacing: 0.5 },
+  h1:          { fontSize: 28, fontWeight: '700' as const, fontFamily: serif },
+  h2:          { fontSize: 22, fontWeight: '700' as const, fontFamily: serif },
   h3:          { fontSize: 18, fontWeight: '600' as const, fontFamily: serif },
-
-  // Sans-serif body
   body:        { fontSize: 15, fontWeight: '400' as const, lineHeight: 22 },
   bodyBold:    { fontSize: 15, fontWeight: '600' as const },
   caption:     { fontSize: 13, fontWeight: '400' as const },

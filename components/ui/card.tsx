@@ -57,8 +57,8 @@ export function CardRow({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.glass,
-    borderRadius: radius.lg,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: spacing.md,
@@ -66,12 +66,12 @@ const styles = StyleSheet.create({
   glowBase: {
     borderWidth: 1,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    elevation: 8,
+    shadowOpacity: 0.32,
+    shadowRadius: 22,
+    elevation: 10,
   },
   divider: {
-    height: 1,
+    height: StyleSheet.hairlineWidth,
     backgroundColor: colors.glassBorder,
     marginVertical: spacing.sm,
   },
@@ -79,6 +79,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    paddingVertical: 6,
   },
 })

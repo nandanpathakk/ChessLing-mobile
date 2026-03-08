@@ -8,6 +8,8 @@ import {
   ViewStyle,
 } from 'react-native'
 
+const MONO = 'monospace'
+
 interface ButtonProps {
   label: string
   onPress: () => void
@@ -31,29 +33,29 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading
 
-  const paddingV = size === 'sm' ? 11 : size === 'lg' ? 16 : 13
-  const fontSize  = size === 'sm' ? 11 : size === 'lg' ? 13 : 12
-  const spacing   = size === 'sm' ? 2.0 : 2.5
+  const paddingV = size === 'sm' ? 10 : size === 'lg' ? 16 : 13
+  const fz       = size === 'sm' ? 10 : size === 'lg' ? 11 : 11
+  const ls       = 2.5
 
-  // ── PRIMARY — white fill, black text ──────────────────────────────────────
+  // ── PRIMARY — amber fill, dark text ───────────────────────────────────────
   if (variant === 'primary') {
     return (
       <TouchableOpacity
         onPress={onPress}
         disabled={isDisabled}
-        activeOpacity={0.80}
+        activeOpacity={0.82}
         style={[
           styles.primary,
-          { paddingVertical: paddingV, opacity: isDisabled ? 0.35 : 1 },
+          { paddingVertical: paddingV, opacity: isDisabled ? 0.28 : 1 },
           style,
         ]}
       >
         {loading
-          ? <ActivityIndicator color="#0B0B0B" size="small" />
+          ? <ActivityIndicator color="#0B0B0F" size="small" />
           : (
             <View style={styles.row}>
-              {icon && <View style={styles.iconLeft}>{icon}</View>}
-              <Text style={[styles.labelDark, { fontSize, letterSpacing: spacing }]}>
+              {icon && <View style={styles.iconL}>{icon}</View>}
+              <Text style={[styles.lDark, { fontSize: fz, letterSpacing: ls }]}>
                 {label.toUpperCase()}
               </Text>
             </View>
@@ -62,7 +64,7 @@ export function Button({
     )
   }
 
-  // ── OUTLINE — hairline border, white text ─────────────────────────────────
+  // ── OUTLINE / SECONDARY — white border, white text ─────────────────────────
   if (variant === 'outline' || variant === 'secondary') {
     return (
       <TouchableOpacity
@@ -71,16 +73,16 @@ export function Button({
         activeOpacity={0.70}
         style={[
           styles.outline,
-          { paddingVertical: paddingV, opacity: isDisabled ? 0.32 : 1 },
+          { paddingVertical: paddingV, opacity: isDisabled ? 0.28 : 1 },
           style,
         ]}
       >
         {loading
-          ? <ActivityIndicator color="#FFFFFF" size="small" />
+          ? <ActivityIndicator color="#F0EDE8" size="small" />
           : (
             <View style={styles.row}>
-              {icon && <View style={styles.iconLeft}>{icon}</View>}
-              <Text style={[styles.labelLight, { fontSize, letterSpacing: spacing }]}>
+              {icon && <View style={styles.iconL}>{icon}</View>}
+              <Text style={[styles.lLight, { fontSize: fz, letterSpacing: ls }]}>
                 {label.toUpperCase()}
               </Text>
             </View>
@@ -89,7 +91,7 @@ export function Button({
     )
   }
 
-  // ── DANGER — red border, red text ─────────────────────────────────────────
+  // ── DANGER ────────────────────────────────────────────────────────────────
   if (variant === 'danger') {
     return (
       <TouchableOpacity
@@ -98,16 +100,20 @@ export function Button({
         activeOpacity={0.70}
         style={[
           styles.outline,
-          { paddingVertical: paddingV, borderColor: 'rgba(248,113,113,0.55)', opacity: isDisabled ? 0.32 : 1 },
+          {
+            paddingVertical: paddingV,
+            borderColor: 'rgba(239,68,68,0.50)',
+            opacity: isDisabled ? 0.28 : 1,
+          },
           style,
         ]}
       >
         {loading
-          ? <ActivityIndicator color="#F87171" size="small" />
+          ? <ActivityIndicator color="#EF4444" size="small" />
           : (
             <View style={styles.row}>
-              {icon && <View style={styles.iconLeft}>{icon}</View>}
-              <Text style={[styles.labelLight, { fontSize, letterSpacing: spacing, color: '#F87171' }]}>
+              {icon && <View style={styles.iconL}>{icon}</View>}
+              <Text style={[styles.lLight, { fontSize: fz, letterSpacing: ls, color: '#EF4444' }]}>
                 {label.toUpperCase()}
               </Text>
             </View>
@@ -116,20 +122,20 @@ export function Button({
     )
   }
 
-  // ── GHOST — no border, muted text ─────────────────────────────────────────
+  // ── GHOST ─────────────────────────────────────────────────────────────────
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.60}
       style={[
-        { paddingVertical: paddingV, paddingHorizontal: 16, alignItems: 'center', opacity: isDisabled ? 0.32 : 1 },
+        { paddingVertical: paddingV, paddingHorizontal: 16, alignItems: 'center', opacity: isDisabled ? 0.28 : 1 },
         style,
       ]}
     >
       <View style={styles.row}>
-        {icon && <View style={styles.iconLeft}>{icon}</View>}
-        <Text style={[styles.labelMuted, { fontSize, letterSpacing: spacing }]}>
+        {icon && <View style={styles.iconL}>{icon}</View>}
+        <Text style={[styles.lMuted, { fontSize: fz, letterSpacing: ls }]}>
           {label.toUpperCase()}
         </Text>
       </View>
@@ -138,37 +144,37 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  // Shared shape
   primary: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 3,
+    backgroundColor: '#E8B84B',
+    borderRadius: 2,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
   outline: {
     backgroundColor: 'transparent',
-    borderRadius: 3,
+    borderRadius: 2,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.38)',
+    borderColor: 'rgba(240,237,232,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-
   row: { flexDirection: 'row', alignItems: 'center' },
-  iconLeft: { marginRight: 8 },
-
-  labelDark: {
+  iconL: { marginRight: 8 },
+  lDark: {
     fontWeight: '700',
-    color: '#0B0B0B',
+    color: '#0B0B0F',
+    fontFamily: MONO,
   },
-  labelLight: {
+  lLight: {
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#F0EDE8',
+    fontFamily: MONO,
   },
-  labelMuted: {
+  lMuted: {
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(240,237,232,0.36)',
+    fontFamily: MONO,
   },
 })

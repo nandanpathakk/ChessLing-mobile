@@ -10,7 +10,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           // Semi-transparent glass header on dark mesh
-          headerStyle: { backgroundColor: 'rgba(14,21,37,0.92)' },
+          headerStyle: { backgroundColor: 'rgba(8,8,13,0.96)' },
           headerTintColor: colors.text,
           headerTitleStyle: {
             fontWeight: '700',

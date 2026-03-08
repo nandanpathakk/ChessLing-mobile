@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   // ── Stage ──────────────────────────────────────────────────────────────────
   stage: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0B0B0B',
+    backgroundColor: '#08080D',
   },
 
   // ── Grid ───────────────────────────────────────────────────────────────────
@@ -221,20 +221,19 @@ const styles = StyleSheet.create({
   rule: {
     width: 156,
     height: StyleSheet.hairlineWidth,
-    // Same visual weight as grid lines — unified design language
-    backgroundColor: 'rgba(255,255,255,0.45)',
+    backgroundColor: 'rgba(200,166,90,0.55)',
   },
   title: {
     fontSize: 26,
     fontFamily: mono,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#EEE9DF',
     letterSpacing: 11,
   },
   tagline: {
     fontSize: 10,
     letterSpacing: 3.2,
-    color: 'rgba(255,255,255,0.32)',
+    color: 'rgba(200,166,90,0.45)',
     textTransform: 'uppercase',
     marginTop: 2,
   },
