@@ -35,13 +35,17 @@ export function useStake(): UseStakeResult {
       setStatus('signing')
       setError(null)
 
-      const instructions = buildStakeInstructions(
-        account.address,
-        matchId,
-        stakeAmountLamports,
-      )
+      let sig = `friendly-${Date.now()}` // Mock signature for 0-stake games
 
-      const sig = await sendTransaction(instructions)
+      if (stakeAmountLamports > 0) {
+        const instructions = buildStakeInstructions(
+          account.address,
+          matchId,
+          stakeAmountLamports,
+        )
+        sig = await sendTransaction(instructions)
+      }
+
       setTxSignature(sig)
 
       setStatus('confirming')

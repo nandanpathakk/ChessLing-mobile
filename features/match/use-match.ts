@@ -36,8 +36,8 @@ export function useMatch(matchId: string | null): UseMatchResult {
         setIsLoading(false)
       })
 
-    const unsubscribe = subscribeToMatch(matchId, (updated) => {
-      setMatch(updated)
+    const unsubscribe = subscribeToMatch(matchId, (updater) => {
+      setMatch(updater as any)
     })
 
     return unsubscribe

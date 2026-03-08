@@ -33,15 +33,20 @@ export function useChessGame(matchId: string, playerPublicKey: string): ChessGam
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const hasFlaggedTimeout = useRef(false)
+  const isMoving = useRef(false)
 
   // ── Derived values ─────────────────────────────────────────────────────────
 
+  const isLocalPlay = match?.host_public_key === match?.guest_public_key
+
   const playerColor: PlayerColor | null =
-    match?.host_public_key === playerPublicKey
-      ? match.host_color
-      : match?.guest_public_key === playerPublicKey
-        ? match?.guest_color ?? null
-        : null
+    isLocalPlay && match
+      ? (match.turn === 'w' ? 'white' : 'black')
+      : match?.host_public_key === playerPublicKey
+        ? match.host_color
+        : match?.guest_public_key === playerPublicKey
+          ? match?.guest_color ?? null
+          : null
 
   const isMyTurn =
     !!playerColor &&
@@ -61,11 +66,14 @@ export function useChessGame(matchId: string, playerPublicKey: string): ChessGam
       })
       .finally(() => setIsLoading(false))
 
-    const unsub = subscribeToMatch(matchId, (updated) => {
-      setMatch(updated)
-      // Reset clocks to authoritative server values on each move
-      setLocalClocks({ white: updated.clock_white, black: updated.clock_black })
-      hasFlaggedTimeout.current = false
+    const unsub = subscribeToMatch(matchId, (updater) => {
+      setMatch((prev) => {
+        const updated = updater(prev)
+        // Reset clocks to authoritative server values on each move
+        setLocalClocks({ white: updated.clock_white, black: updated.clock_black })
+        hasFlaggedTimeout.current = false
+        return updated
+      })
     })
 
     return unsub
@@ -132,6 +140,9 @@ export function useChessGame(matchId: string, playerPublicKey: string): ChessGam
         setValidTargets(targets)
       } else if (validTargets.includes(square)) {
         // Execute the move
+        if (isMoving.current) return
+        isMoving.current = true
+
         const from = selectedSquare
         setSelectedSquare(null)
         setValidTargets([])
@@ -142,7 +153,33 @@ export function useChessGame(matchId: string, playerPublicKey: string): ChessGam
             ? Math.max(0, match.clock_white - elapsed)
             : Math.max(0, match.clock_black - elapsed)
 
-        makeMove(matchId, playerPublicKey, from, square, newClock).catch(console.error)
+        // Optimistic UI Update: apply the move instantly on the client
+        try {
+          const tempGame = new Chess(match.fen)
+          tempGame.move({ from, to: square, promotion: 'q' })
+
+          setMatch((prev) => {
+            if (!prev) return prev
+            return {
+              ...prev,
+              fen: tempGame.fen(),
+              turn: tempGame.turn(),
+              last_move_from: from,
+              last_move_to: square,
+              moves: [...(prev.moves || []), `${from}${square}`]
+            }
+          })
+        } catch (e) {
+          console.warn('Optimistic preview failed', e)
+        }
+
+        makeMove(matchId, playerPublicKey, from, square, newClock)
+          .catch((err) => {
+            console.error('Failed to make move:', err)
+          })
+          .finally(() => {
+            isMoving.current = false
+          })
       } else if (square === selectedSquare) {
         // Deselect
         setSelectedSquare(null)

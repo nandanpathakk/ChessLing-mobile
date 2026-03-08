@@ -21,7 +21,7 @@ import {
   lamportsToSol,
   calculatePrize,
 } from '@/features/match/match-types'
-import { createMatch, subscribeToMatch } from '@/features/match/match-service'
+import { createMatch, subscribeToMatch, getMatch } from '@/features/match/match-service'
 import { useStake } from '@/features/stake/use-stake'
 
 type StakeOption = typeof STAKE_OPTIONS[number]
@@ -34,12 +34,12 @@ export default function CreateScreen() {
   const { account } = useMobileWallet()
   const { stake, error: stakeError } = useStake()
 
-  const [step, setStep]                   = useState<Step>('config')
+  const [step, setStep] = useState<Step>('config')
   const [selectedStake, setSelectedStake] = useState<StakeOption>(STAKE_OPTIONS[1])
-  const [selectedTime, setSelectedTime]   = useState<TimeControl>(TIME_CONTROLS[1])
-  const [matchId, setMatchId]             = useState<string | null>(null)
-  const [matchCode, setMatchCode]         = useState<string | null>(null)
-  const [error, setError]                 = useState<string | null>(null)
+  const [selectedTime, setSelectedTime] = useState<TimeControl>(TIME_CONTROLS[1])
+  const [matchId, setMatchId] = useState<string | null>(null)
+  const [matchCode, setMatchCode] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const spinVal = useRef(new Animated.Value(0)).current
   const pulseVal = useRef(new Animated.Value(1)).current
@@ -63,8 +63,16 @@ export default function CreateScreen() {
 
   useEffect(() => {
     if (!matchId) return
-    const unsub = subscribeToMatch(matchId, (match) => {
-      if (match.status === 'active') { unsub(); router.replace(`/game/${matchId}`) }
+
+    // Immediately fetch just in case we already missed the realtime event
+    getMatch(matchId).then((m) => {
+      if (m.status === 'active') { router.replace(`/game/${matchId}`) }
+    }).catch(console.error)
+
+    const unsub = subscribeToMatch(matchId, (updater) => {
+      // Create a dummy merge just to check the new status
+      const nextState = updater(null)
+      if (nextState.status === 'active') { unsub(); router.replace(`/game/${matchId}`) }
     })
     return unsub
   }, [matchId])
@@ -315,10 +323,10 @@ export default function CreateScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0B0B0F' },
-  safe:   { flex: 1 },
+  root: { flex: 1, backgroundColor: '#0B0B0F' },
+  safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
-  flex1:  { flex: 1 },
+  flex1: { flex: 1 },
 
   // ── Header ────────────────────────────────────────────────────────────────
   header: {

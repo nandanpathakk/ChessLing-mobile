@@ -20,15 +20,15 @@ import { lamportsToSol, PLATFORM_FEE_BPS } from '@/features/match/match-types'
 import { explorerTxUrl } from '@/features/stake/stake-service'
 
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif'
-const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
+const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
 
 const REASON_LABELS: Record<string, string> = {
-  checkmate:   'by checkmate',
-  timeout:     'on time',
+  checkmate: 'by checkmate',
+  timeout: 'on time',
   resignation: 'by resignation',
-  stalemate:   'stalemate',
-  draw:        'draw',
-  abandoned:   'match cancelled',
+  stalemate: 'stalemate',
+  draw: 'draw',
+  abandoned: 'match cancelled',
 }
 
 // ── Prize-tx helpers ──────────────────────────────────────────────────────────
@@ -66,9 +66,9 @@ export default function ResultScreen() {
   const { account } = useMobileWallet()
   const { match, isLoading } = useMatch(id ?? null)
 
-  const [claiming, setClaiming]   = useState(false)
-  const [claimed, setClaimed]     = useState(false)
-  const [claimErr, setClaimErr]   = useState<string | null>(null)
+  const [claiming, setClaiming] = useState(false)
+  const [claimed, setClaimed] = useState(false)
+  const [claimErr, setClaimErr] = useState<string | null>(null)
 
   // Spinner animation (loading state)
   const spinVal = useRef(new Animated.Value(0)).current
@@ -83,13 +83,21 @@ export default function ResultScreen() {
 
   // Entry animations (result loaded)
   const hasAnimated = useRef(false)
-  const verdictOp   = useRef(new Animated.Value(0)).current
-  const verdictY    = useRef(new Animated.Value(20)).current
-  const contentOp   = useRef(new Animated.Value(0)).current
-  const contentY    = useRef(new Animated.Value(16)).current
+  const verdictOp = useRef(new Animated.Value(0)).current
+  const verdictY = useRef(new Animated.Value(20)).current
+  const contentOp = useRef(new Animated.Value(0)).current
+  const contentY = useRef(new Animated.Value(16)).current
 
   useEffect(() => {
-    if (!match || hasAnimated.current) return
+    if (!match) return
+
+    // Eagerly boot user back to home if the game ended via resignation
+    if (match.result_reason === 'resignation') {
+      router.replace('/')
+      return
+    }
+
+    if (hasAnimated.current) return
     hasAnimated.current = true
     Animated.sequence([
       Animated.parallel([
@@ -108,7 +116,7 @@ export default function ResultScreen() {
         }),
       ]),
     ]).start()
-  }, [match])
+  }, [match, verdictOp, verdictY, contentOp, contentY])
 
   if (isLoading || !match) {
     return (
@@ -119,15 +127,15 @@ export default function ResultScreen() {
     )
   }
 
-  const myKey   = account?.address ?? ''
-  const isHost  = match.host_public_key === myKey
+  const myKey = account?.address ?? ''
+  const isHost = match.host_public_key === myKey
   const myColor = isHost ? match.host_color : match.guest_color
-  const winner  = match.winner
+  const winner = match.winner
 
   const isWinner = winner !== 'draw' && winner === myColor
-  const isDraw   = winner === 'draw'
+  const isDraw = winner === 'draw'
 
-  const resultLabel    = isDraw ? 'DRAW' : isWinner ? 'VICTORY' : 'DEFEAT'
+  const resultLabel = isDraw ? 'DRAW' : isWinner ? 'VICTORY' : 'DEFEAT'
   const resultSubtitle = match.result_reason ? (REASON_LABELS[match.result_reason] ?? '') : ''
 
   const verdictColor = isDraw
@@ -136,11 +144,11 @@ export default function ResultScreen() {
       ? '#E8B84B'
       : '#EF4444'
 
-  const prizeAmount    = match.prize_amount
-  const prizeTx        = match.prize_tx
-  const myTx           = parseMyTx(prizeTx, isHost)
-  const disbursed      = isPrizeDisbursed(prizeTx) || claimed
-  const pending        = isPrizePending(prizeTx)
+  const prizeAmount = match.prize_amount
+  const prizeTx = match.prize_tx
+  const myTx = parseMyTx(prizeTx, isHost)
+  const disbursed = isPrizeDisbursed(prizeTx) || claimed
+  const pending = isPrizePending(prizeTx)
 
   const eachDrawRefund = isDraw && prizeAmount
     ? Math.floor(((prizeAmount * (10_000 - PLATFORM_FEE_BPS)) / 10_000) / 2)
@@ -315,8 +323,8 @@ export default function ResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0B0B0F' },
-  safe:   { flex: 1 },
+  root: { flex: 1, backgroundColor: '#0B0B0F' },
+  safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
 
   // ── Loading ───────────────────────────────────────────────────────────────

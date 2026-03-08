@@ -10,18 +10,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
+import { createLocalPlayMatch } from '@/features/match/match-service'
 import { Button } from '@/components/ui/button'
 import { WalletButton } from '@/components/ui/wallet-chip'
 import { SplashScreen } from '@/components/ui/splash-screen'
 
-const mono  = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
+const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
 const serif = Platform.OS === 'ios' ? 'Georgia' : 'serif'
 
 export default function HomeScreen() {
   const { account } = useMobileWallet()
   const [showSplash, setShowSplash] = useState(true)
 
-  const fadeAnim  = useRef(new Animated.Value(0)).current
+  const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(28)).current
 
   useEffect(() => {
@@ -122,6 +123,25 @@ export default function HomeScreen() {
                 />
                 {!account && (
                   <Text style={styles.walletNote}>Connect wallet above to play</Text>
+                )}
+
+                {__DEV__ && (
+                  <Button
+                    label="[DEV] Local Self-Play"
+                    onPress={async () => {
+                      if (!account) return
+                      try {
+                        const { matchId } = await createLocalPlayMatch(account.address)
+                        router.push(`/game/${matchId}`)
+                      } catch (e) {
+                        console.error('Failed to create local match', e)
+                      }
+                    }}
+                    variant="outline"
+                    size="lg"
+                    disabled={!account}
+                    style={{ borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                  />
                 )}
               </View>
 

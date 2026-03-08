@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useMemo, memo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Chess, Square } from 'chess.js'
 import {
@@ -8,6 +8,7 @@ import {
   getCheckedKingSquare,
   getBoardLabels,
   BoardData,
+  PieceData,
 } from './chess-engine'
 import { colors, BOARD_SIZE, SQUARE_SIZE, PIECE_FONT_SIZE } from '@/constants/theme'
 
@@ -21,6 +22,90 @@ interface ChessBoardProps {
   disabled?: boolean
 }
 
+// ── Memoized Square Component to prevent 64 re-renders ──────────────────────
+interface SquareCellProps {
+  square: Square
+  piece: PieceData
+  isLight: boolean
+  isSelected: boolean
+  isLastFrom: boolean
+  isLastTo: boolean
+  isValidTarget: boolean
+  isInCheck: boolean
+  showRankLabel: boolean
+  showFileLabel: boolean
+  rankLabel: string
+  fileLabel: string
+  onPress: (square: Square) => void
+}
+
+const SquareCell = memo(({
+  square, piece, isLight, isSelected, isLastFrom, isLastTo, isValidTarget,
+  isInCheck, showRankLabel, showFileLabel, rankLabel, fileLabel, onPress,
+}: SquareCellProps) => {
+  const isCapture = isValidTarget && piece !== null
+  const squareBg = isLight ? colors.boardLight : colors.boardDark
+
+  return (
+    <TouchableOpacity
+      style={[styles.square, { backgroundColor: squareBg }]}
+      onPress={() => onPress(square)}
+      activeOpacity={0.85}
+    >
+      {/* Highlight layers */}
+      {(isLastFrom || isLastTo) && !isSelected && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.boardLastMove }]} />
+      )}
+      {isInCheck && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.boardCheck }]} />
+      )}
+      {isSelected && (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.boardSelected }]} />
+      )}
+
+      {/* Valid move dot */}
+      {isValidTarget && !isCapture && <View style={styles.moveDot} />}
+      {/* Capture ring */}
+      {isCapture && <View style={styles.captureRing} />}
+
+      {/* Chess piece — heavy 3D drop shadow for depth */}
+      {piece && (
+        <Text
+          style={[
+            styles.piece,
+            piece.color === 'w' ? styles.pieceWhite : styles.pieceBlack,
+          ]}
+          allowFontScaling={false}
+        >
+          {PIECE_UNICODE[piece.color][piece.type]}
+        </Text>
+      )}
+
+      {/* Board coordinates — subtle, square-color adaptive */}
+      {showRankLabel && (
+        <Text
+          style={[
+            styles.rankLabel,
+            { color: isLight ? colors.boardDark : colors.boardLight },
+          ]}
+        >
+          {rankLabel}
+        </Text>
+      )}
+      {showFileLabel && (
+        <Text
+          style={[
+            styles.fileLabel,
+            { color: isLight ? colors.boardDark : colors.boardLight },
+          ]}
+        >
+          {fileLabel}
+        </Text>
+      )}
+    </TouchableOpacity>
+  )
+})
+
 export function ChessBoard({
   fen,
   playerColor,
@@ -31,10 +116,17 @@ export function ChessBoard({
   disabled = false,
 }: ChessBoardProps) {
   const flipped = playerColor === 'b'
-  const game = new Chess(fen)
-  const board = game.board() as BoardData
-  const checkedKing = getCheckedKingSquare(fen)
-  const { files, ranks } = getBoardLabels(flipped)
+
+  // Memoize heavy engine parsing so it only fires when the underlying FEN changes
+  const boardData = useMemo(() => {
+    const game = new Chess(fen)
+    return {
+      board: game.board() as BoardData,
+      checkedKing: getCheckedKingSquare(fen),
+    }
+  }, [fen])
+
+  const { files, ranks } = useMemo(() => getBoardLabels(flipped), [flipped])
 
   const handlePress = useCallback(
     (square: Square) => { if (!disabled) onSquarePress(square) },
@@ -46,82 +138,26 @@ export function ChessBoard({
       {Array.from({ length: 8 }, (_, row) => (
         <View key={row} style={styles.row}>
           {Array.from({ length: 8 }, (_, col) => {
-            const square   = getSquareName(row, col, flipped)
-            const piece    = getPieceAtDisplay(board, row, col, flipped)
-            const isLight  = (row + col) % 2 === 1
-
-            const isSelected    = selectedSquare === square
-            const isLastFrom    = lastMove?.from === square
-            const isLastTo      = lastMove?.to === square
-            const isValidTarget = validTargets.includes(square)
-            const isInCheck     = checkedKing === square
-            const isCapture     = isValidTarget && piece !== null
-
-            const squareBg = isLight ? colors.boardLight : colors.boardDark
-
-            const showRankLabel = col === 0
-            const showFileLabel = row === 7
+            const square = getSquareName(row, col, flipped)
+            const piece = getPieceAtDisplay(boardData.board, row, col, flipped)
 
             return (
-              <TouchableOpacity
+              <SquareCell
                 key={square}
-                style={[styles.square, { backgroundColor: squareBg }]}
-                onPress={() => handlePress(square)}
-                activeOpacity={0.85}
-              >
-                {/* Highlight layers */}
-                {(isLastFrom || isLastTo) && !isSelected && (
-                  <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.boardLastMove }]} />
-                )}
-                {isInCheck && (
-                  <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.boardCheck }]} />
-                )}
-                {isSelected && (
-                  <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.boardSelected }]} />
-                )}
-
-                {/* Valid move dot */}
-                {isValidTarget && !isCapture && <View style={styles.moveDot} />}
-                {/* Capture ring */}
-                {isCapture && <View style={styles.captureRing} />}
-
-                {/* Chess piece — heavy 3D drop shadow for depth */}
-                {piece && (
-                  <Text
-                    style={[
-                      styles.piece,
-                      piece.color === 'w'
-                        ? styles.pieceWhite
-                        : styles.pieceBlack,
-                    ]}
-                    allowFontScaling={false}
-                  >
-                    {PIECE_UNICODE[piece.color][piece.type]}
-                  </Text>
-                )}
-
-                {/* Board coordinates — subtle, square-color adaptive */}
-                {showRankLabel && (
-                  <Text
-                    style={[
-                      styles.rankLabel,
-                      { color: isLight ? colors.boardDark : colors.boardLight },
-                    ]}
-                  >
-                    {ranks[row]}
-                  </Text>
-                )}
-                {showFileLabel && (
-                  <Text
-                    style={[
-                      styles.fileLabel,
-                      { color: isLight ? colors.boardDark : colors.boardLight },
-                    ]}
-                  >
-                    {files[col]}
-                  </Text>
-                )}
-              </TouchableOpacity>
+                square={square}
+                piece={piece}
+                isLight={(row + col) % 2 === 1}
+                isSelected={selectedSquare === square}
+                isLastFrom={lastMove?.from === square}
+                isLastTo={lastMove?.to === square}
+                isValidTarget={validTargets.includes(square)}
+                isInCheck={boardData.checkedKing === square}
+                showRankLabel={col === 0}
+                showFileLabel={row === 7}
+                rankLabel={ranks[row]}
+                fileLabel={files[col]}
+                onPress={handlePress}
+              />
             )
           })}
         </View>
@@ -159,9 +195,9 @@ const styles = StyleSheet.create({
   },
   pieceBlack: {
     color: colors.pieceBlack,
-    textShadowColor: 'rgba(0,0,0,0.30)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 5,
+    textShadowColor: 'rgba(255,255,255,0.15)',
+    textShadowOffset: { width: 0, height: 1.5 },
+    textShadowRadius: 6,
   },
 
   moveDot: {

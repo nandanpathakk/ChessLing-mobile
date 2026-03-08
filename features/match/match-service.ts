@@ -36,6 +36,12 @@ export async function createMatch(
   return post('/api/matches', { hostPublicKey, stakeAmount, timeControl })
 }
 
+export async function createLocalPlayMatch(
+  publicKey: string,
+): Promise<{ matchId: string }> {
+  return post('/api/matches/local-play', { publicKey })
+}
+
 export async function getMatchByCode(code: string): Promise<MatchRow> {
   return get(`/api/matches/code/${code.toUpperCase().trim()}`)
 }
@@ -87,10 +93,13 @@ export async function abandonMatch(matchId: string, publicKey: string): Promise<
 /**
  * Subscribe to live updates for a match row.
  * Returns an unsubscribe function to clean up on unmount.
+ * 
+ * onUpdate provides a callback that clients pass their *previous* state into,
+ * merging the partial Supabase payload with their local state.
  */
 export function subscribeToMatch(
   matchId: string,
-  onUpdate: (match: MatchRow) => void,
+  onUpdate: (updater: (prev: MatchRow | null) => MatchRow) => void,
 ): () => void {
   const channel = supabase
     .channel(`match:${matchId}`)
@@ -103,7 +112,7 @@ export function subscribeToMatch(
         filter: `id=eq.${matchId}`,
       },
       (payload) => {
-        onUpdate(payload.new as MatchRow)
+        onUpdate((prev) => ({ ...prev, ...(payload.new as MatchRow) }))
       },
     )
     .subscribe()

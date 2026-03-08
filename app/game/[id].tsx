@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   View,
   Text,
@@ -74,6 +74,8 @@ export default function GameScreen() {
     handleSquarePress, handleResign,
   } = useChessGame(id ?? '', account?.address ?? '')
 
+  const [isExiting, setIsExiting] = useState(false)
+
   const spinVal = useRef(new Animated.Value(0)).current
   useEffect(() => {
     Animated.loop(
@@ -83,13 +85,37 @@ export default function GameScreen() {
   const spinDeg = spinVal.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
 
   useEffect(() => {
-    if (match?.status === 'completed') router.replace(`/result/${id}`)
-  }, [match?.status, id])
+    // If the local screen has already initiated destruction, ignore external updates
+    if (isExiting) return
+
+    if (match?.status === 'completed') {
+      if (match.result_reason === 'resignation') {
+        router.replace('/')
+      } else {
+        router.replace(`/result/${id}`)
+      }
+    }
+  }, [match?.status, match?.result_reason, id, isExiting])
 
   function confirmResign() {
-    Alert.alert('Resign?', 'Your opponent wins the match and stake.', [
+    Alert.alert('Resign?', 'Your opponent wins the match and your stake.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Resign', style: 'destructive', onPress: () => handleResign() },
+      {
+        text: 'Resign',
+        style: 'destructive',
+        onPress: () => {
+          // 1. Immediately tear down screen so it can't receive board taps
+          setIsExiting(true)
+
+          // 2. Dispatch home route
+          router.replace('/')
+
+          // 3. Fire the resignation asynchronously into the backend
+          handleResign().catch((err) => {
+            console.error('Quiet Resign Failure:', err)
+          })
+        }
+      },
     ])
   }
 
@@ -102,24 +128,24 @@ export default function GameScreen() {
     )
   }
 
-  const isWhite       = playerColor === 'white'
-  const chessColor    = isWhite ? 'w' : 'b'
-  const opponentKey   = isWhite ? match.guest_public_key : match.host_public_key
-  const myKey         = account?.address ?? ''
+  const isWhite = playerColor === 'white'
+  const chessColor = isWhite ? 'w' : 'b'
+  const opponentKey = isWhite ? match.guest_public_key : match.host_public_key
+  const myKey = account?.address ?? ''
   const opponentColor = isWhite ? 'black' : 'white'
-  const opponentMs    = opponentColor === 'white' ? localClocks.white : localClocks.black
-  const myMs          = isWhite ? localClocks.white : localClocks.black
-  const opponentTurn  = match.turn === (opponentColor === 'white' ? 'w' : 'b')
-  const lastMove      = match.last_move_from && match.last_move_to
+  const opponentMs = opponentColor === 'white' ? localClocks.white : localClocks.black
+  const myMs = isWhite ? localClocks.white : localClocks.black
+  const opponentTurn = match.turn === (opponentColor === 'white' ? 'w' : 'b')
+  const lastMove = match.last_move_from && match.last_move_to
     ? { from: match.last_move_from, to: match.last_move_to }
     : null
-  const stakeSOL   = (match.stake_amount / 1e9).toFixed(2)
-  const totalMs    = match.time_control * 1000
+  const stakeSOL = (match.stake_amount / 1e9).toFixed(2)
+  const totalMs = match.time_control * 1000
 
   const { byWhite, byBlack } = getCaptured(match.fen)
-  const myCaptured   = isWhite ? byWhite : byBlack
-  const moveHistory  = getMoveHistory(match.moves ?? [])
-  const lastPairIdx  = moveHistory.length - 1
+  const myCaptured = isWhite ? byWhite : byBlack
+  const moveHistory = getMoveHistory(match.moves ?? [])
+  const lastPairIdx = moveHistory.length - 1
 
   return (
     <View style={styles.root}>
@@ -134,6 +160,7 @@ export default function GameScreen() {
           label={opponentColor === 'white' ? 'White' : 'Black'}
           shortAddress={opponentKey ? shortAddr(opponentKey) : '···'}
           totalMs={totalMs}
+          capturedPieces={isWhite ? byBlack : byWhite}
         />
 
         {/* ─────────────────────────────────────────────────────────────────
@@ -168,17 +195,6 @@ export default function GameScreen() {
             <Text style={styles.stakeVal}>{stakeSOL}</Text>
             <Text style={styles.stakeUnit}> SOL</Text>
           </View>
-
-          {/* Captured pieces */}
-          {myCaptured.length > 0 ? (
-            <View style={styles.capturedSection}>
-              {myCaptured.slice(0, 6).map((type, i) => (
-                <Text key={i} style={styles.capturedPiece}>{PIECE_SYM[type] ?? ''}</Text>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.capturedSection} />
-          )}
         </View>
 
         {/* ─────────────────────────────────────────────────────────────────
@@ -190,6 +206,7 @@ export default function GameScreen() {
           label={playerColor === 'white' ? 'White' : 'Black'}
           shortAddress={shortAddr(myKey)}
           totalMs={totalMs}
+          capturedPieces={isWhite ? byWhite : byBlack}
         />
 
         {/* ─────────────────────────────────────────────────────────────────
@@ -244,8 +261,8 @@ export default function GameScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0B0B0F' },
-  safe:   { flex: 1 },
+  root: { flex: 1, backgroundColor: '#0B0B0F' },
+  safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
 
   // ── Board ────────────────────────────────────────────────────────────────
@@ -315,20 +332,6 @@ const styles = StyleSheet.create({
     fontFamily: mono,
     fontWeight: '600',
     color: 'rgba(232,184,75,0.50)',
-    letterSpacing: 1,
-  },
-
-  capturedSection: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    flexWrap: 'wrap',
-    gap: 1,
-  },
-  capturedPiece: {
-    fontSize: 12,
-    color: 'rgba(232,184,75,0.42)',
-    lineHeight: 16,
   },
 
   // ── Controls ──────────────────────────────────────────────────────────────

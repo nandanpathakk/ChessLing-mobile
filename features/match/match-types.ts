@@ -40,6 +40,7 @@ export interface MatchRow {
 }
 
 export const STAKE_OPTIONS = [
+  { label: 'Friendly', value: 0, display: '0' },
   { label: '0.05 SOL', value: 50_000_000, display: '0.05' },
   { label: '0.1 SOL', value: 100_000_000, display: '0.1' },
   { label: '0.25 SOL', value: 250_000_000, display: '0.25' },

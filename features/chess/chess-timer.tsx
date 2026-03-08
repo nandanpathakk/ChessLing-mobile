@@ -9,6 +9,7 @@ interface ChessTimerProps {
   label: string
   shortAddress: string
   totalMs?: number
+  capturedPieces?: string[]
 }
 
 function formatTime(ms: number): string {
@@ -19,9 +20,16 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-export function ChessTimer({ milliseconds, isActive, label, shortAddress, totalMs }: ChessTimerProps) {
-  const isLow   = milliseconds > 0 && milliseconds < 10_000
-  const isWarn  = milliseconds > 0 && milliseconds < 30_000 && !isLow
+export function ChessTimer({
+  milliseconds,
+  isActive,
+  label,
+  shortAddress,
+  totalMs,
+  capturedPieces = []
+}: ChessTimerProps) {
+  const isLow = milliseconds > 0 && milliseconds < 10_000
+  const isWarn = milliseconds > 0 && milliseconds < 30_000 && !isLow
   const pulseAnim = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
@@ -29,7 +37,7 @@ export function ChessTimer({ milliseconds, isActive, label, shortAddress, totalM
       const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, { toValue: 0.20, duration: 380, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1,    duration: 380, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 380, useNativeDriver: true }),
         ]),
       )
       loop.start()
@@ -41,6 +49,10 @@ export function ChessTimer({ milliseconds, isActive, label, shortAddress, totalM
 
   const isWhitePlayer = label.toLowerCase().includes('white')
   const pieceIcon = isWhitePlayer ? '♙' : '♟'
+
+  const PIECE_SYM: Record<string, string> = {
+    q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
+  }
 
   // Clock color progression
   const clockColor = milliseconds <= 0
@@ -71,6 +83,17 @@ export function ChessTimer({ milliseconds, isActive, label, shortAddress, totalM
             {pieceIcon}  {label.toUpperCase()}
           </Text>
           <Text style={styles.playerAddr} numberOfLines={1}>{shortAddress}</Text>
+
+          {capturedPieces.length > 0 && (
+            <View style={styles.capturedRow}>
+              {capturedPieces.slice(0, 8).map((type, i) => (
+                <Text key={i} style={styles.capturedPiece}>{PIECE_SYM[type] ?? ''}</Text>
+              ))}
+              {capturedPieces.length > 8 && (
+                <Text style={styles.capturedMore}>+{capturedPieces.length - 8}</Text>
+              )}
+            </View>
+          )}
         </View>
       </View>
 
@@ -150,6 +173,24 @@ const styles = StyleSheet.create({
     fontFamily: mono,
     color: 'rgba(240,237,232,0.18)',
     letterSpacing: 0.3,
+  },
+  capturedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 2,
+    gap: 1,
+  },
+  capturedPiece: {
+    fontSize: 10,
+    color: 'rgba(232,184,75,0.48)',
+    lineHeight: 12,
+  },
+  capturedMore: {
+    fontSize: 8,
+    fontFamily: mono,
+    color: 'rgba(232,184,75,0.30)',
+    marginLeft: 2,
   },
 
   // ── Clock zone (right ~42%) ──────────────────────────────────────────────
