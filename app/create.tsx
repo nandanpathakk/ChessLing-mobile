@@ -181,7 +181,7 @@ export default function CreateScreen() {
         </Text>
         <Text style={styles.loadSub}>
           {step === 'staking'
-            ? `Sending ${selectedStake.label} to escrow`
+            ? `Sending ${selectedStake.label} to treasury`
             : 'Setting up your game'}
         </Text>
       </View>
@@ -312,7 +312,7 @@ export default function CreateScreen() {
               disabled={!account}
             />
             <Text style={styles.disclaimer}>
-              Funds held in on-chain escrow · Released on game end
+              Funds held in a secure treasury · Released on game end
             </Text>
           </View>
 

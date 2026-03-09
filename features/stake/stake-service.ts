@@ -4,7 +4,7 @@ import { getAddMemoInstruction } from '@solana-program/memo'
 /**
  * Treasury address — set via EXPO_PUBLIC_TREASURY_ADDRESS in your .env file.
  * This is where both players' stakes are sent before the game starts.
- * In production, replace with a Solana Anchor program PDA for trustless escrow.
+ * In production, replace with a Solana Anchor program PDA for trustless treasury.
  */
 export const TREASURY_ADDRESS =
   process.env.EXPO_PUBLIC_TREASURY_ADDRESS ?? 'YOUR_TREASURY_PUBLIC_KEY'
@@ -34,7 +34,7 @@ function buildTransferInstruction(
     programAddress: SYSTEM_PROGRAM,
     accounts: [
       { address: address(fromAddress), role: AccountRole.WRITABLE_SIGNER }, // source
-      { address: address(toAddress),   role: AccountRole.WRITABLE },         // destination
+      { address: address(toAddress), role: AccountRole.WRITABLE },         // destination
     ],
     data,
   }

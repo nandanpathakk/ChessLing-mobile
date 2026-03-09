@@ -4,7 +4,7 @@
     "slug": "chessling",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/splash.png",
+    "icon": "./assets/images/Chess_Icon_no_bg.png",
     "scheme": "chessling",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
@@ -15,9 +15,9 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0B0B0F",
-        "foregroundImage": "./assets/images/splash.png",
-        "backgroundImage": "./assets/images/splash.png",
-        "monochromeImage": "./assets/images/splash.png"
+        "foregroundImage": "./assets/images/Chess_Icon_no_bg.png",
+        "backgroundImage": "./assets/images/Chess_Icon_no_bg.png",
+        "monochromeImage": "./assets/images/Chess_Icon_no_bg.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -32,8 +32,6 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash.png",
-          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0B0B0F",
           "dark": {

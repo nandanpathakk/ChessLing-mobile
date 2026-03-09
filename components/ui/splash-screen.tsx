@@ -14,8 +14,8 @@ const mono = Platform.OS === 'ios' ? 'Courier New' : 'monospace'
 
 // ─── Chess-board grid lines ───────────────────────────────────────────────────
 // Lines only — cleaner and sharper than filled squares
-const CELL    = Math.round(SW / 8)
-const H_TOPS  = Array.from({ length: Math.ceil(SH / CELL) + 3 }, (_, i) => (i - 1) * CELL)
+const CELL = Math.round(SW / 8)
+const H_TOPS = Array.from({ length: Math.ceil(SH / CELL) + 3 }, (_, i) => (i - 1) * CELL)
 const V_LEFTS = Array.from({ length: Math.ceil(SW / CELL) + 3 }, (_, i) => (i - 1) * CELL)
 
 const PIECE_W = SW * 0.76
@@ -26,14 +26,14 @@ interface SplashScreenProps {
 }
 
 export function SplashScreen({ onFinish }: SplashScreenProps) {
-  const bgOp    = useRef(new Animated.Value(0)).current
-  const gridOp  = useRef(new Animated.Value(0)).current
+  const bgOp = useRef(new Animated.Value(0)).current
+  const gridOp = useRef(new Animated.Value(0)).current
   const pieceOp = useRef(new Animated.Value(0)).current
   const pieceSc = useRef(new Animated.Value(0.97)).current
   const ruleScX = useRef(new Animated.Value(0)).current
-  const logoOp  = useRef(new Animated.Value(0)).current
-  const tagOp   = useRef(new Animated.Value(0)).current
-  const exitOp  = useRef(new Animated.Value(1)).current
+  const logoOp = useRef(new Animated.Value(0)).current
+  const tagOp = useRef(new Animated.Value(0)).current
+  const exitOp = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     Animated.sequence([
@@ -142,7 +142,7 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
 
       {/* ── 4. King piece — no shadow, just the piece ── */}
       <Animated.Image
-        source={require('@/assets/images/hero_splash.png')}
+        source={require('@/assets/images/Chess_Icon_no_bg.png')}
         style={[
           styles.piece,
           { opacity: pieceOp, transform: [{ scale: pieceSc }] },

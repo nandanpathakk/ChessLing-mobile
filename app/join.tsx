@@ -28,10 +28,10 @@ export default function JoinScreen() {
   const { account } = useMobileWallet()
   const { stake, error: stakeError } = useStake()
 
-  const [code, setCode]             = useState('')
-  const [step, setStep]             = useState<Step>('enter')
+  const [code, setCode] = useState('')
+  const [step, setStep] = useState<Step>('enter')
   const [foundMatch, setFoundMatch] = useState<MatchRow | null>(null)
-  const [error, setError]           = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const spinVal = useRef(new Animated.Value(0)).current
   useEffect(() => {
@@ -77,7 +77,7 @@ export default function JoinScreen() {
         </Text>
         <Text style={styles.loadSub}>
           {step === 'staking'
-            ? `Sending ${foundMatch ? lamportsToSol(foundMatch.stake_amount) : ''} SOL to escrow`
+            ? `Sending ${foundMatch ? lamportsToSol(foundMatch.stake_amount) : ''} SOL to treasury`
             : 'Searching...'}
         </Text>
       </View>
@@ -86,8 +86,8 @@ export default function JoinScreen() {
 
   // ── REVIEW ─────────────────────────────────────────────────────────────────
   if (step === 'review' && foundMatch) {
-    const prize     = calculatePrize(foundMatch.stake_amount)
-    const timeMin   = Math.round(foundMatch.time_control / 60)
+    const prize = calculatePrize(foundMatch.stake_amount)
+    const timeMin = Math.round(foundMatch.time_control / 60)
     const hostShort = `${foundMatch.host_public_key.slice(0, 6)}···${foundMatch.host_public_key.slice(-6)}`
 
     return (
@@ -196,8 +196,8 @@ export default function JoinScreen() {
           {/* Character display */}
           <View style={styles.charDisplay}>
             {Array.from({ length: 6 }, (_, i) => {
-              const char    = code[i] ?? ''
-              const filled  = i < code.length
+              const char = code[i] ?? ''
+              const filled = i < code.length
               const isCursor = i === code.length && code.length < 6
               return (
                 <View
@@ -265,8 +265,8 @@ export default function JoinScreen() {
 }
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: '#0B0B0F' },
-  safe:   { flex: 1 },
+  root: { flex: 1, backgroundColor: '#0B0B0F' },
+  safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
 
   // ── Header ────────────────────────────────────────────────────────────────
